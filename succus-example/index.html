@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Succus Chat - Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .info {
+            background-color: #e9f7fe;
+            border: 1px solid #b3e5fc;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .connect-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .wallet-info {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .chat-section {
+            display: none;
+            margin-top: 20px;
+        }
+        .messages {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            height: 300px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .message.sent {
+            background-color: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+        }
+        .message.received {
+            background-color: #f1f1f1;
+        }
+        .message .meta {
+            font-size: 12px;
+            color: #777;
+            margin-top: 3px;
+        }
+        .input-area {
+            display: flex;
+            margin-top: 10px;
+        }
+        .input-area input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .recipient-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        #chat-title {
+            text-align: center;
+            margin: 10px 0;
+            color: #333;
+            font-size: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .active {
+            color: green;
+            font-weight: bold;
+        }
+        
+        .warning {
+            color: orange;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        
+        .custom-button {
+            background-color: #4C6FaF;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Succus Chat Demo</h1>
+        
+        <div class="info">
+            <p>Questa è una demo di chat decentralizzata utilizzando la libreria Succus. Per utilizzarla hai bisogno di:</p>
+            <ul>
+                <li>Metamask installato nel browser</li>
+                <li>Un indirizzo Ethereum</li>
+            </ul>
+        </div>
+        
+        <div class="connect-section">
+            <button id="connectWallet">Connetti Wallet</button>
+            <button id="generateKeypair" disabled>Genera Keypair</button>
+            <button id="debugButton" style="background-color: #888;">Debug</button>
+            <button id="refreshChat" style="background-color: #4682b4;">Ricarica Chat</button>
+            <div class="wallet-info" id="walletInfo"></div>
+        </div>
+        
+        <div class="chat-section" id="chatSection">
+            <input type="text" class="recipient-input" id="recipientAddress" placeholder="Indirizzo ETH del destinatario (0x...)">
+            
+            <h3 id="chat-title">Seleziona un destinatario per iniziare a chattare</h3>
+            
+            <div class="messages" id="messagesContainer">
+                <!-- I messaggi appariranno qui -->
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Scrivi un messaggio...">
+                <button id="sendMessage">Invia</button>
+            </div>
+            
+            <!-- Aggiungi un pulsante per il recupero diretto -->
+            <button id="directFetchButton" style="background-color: #28a745; color: white; padding: 8px 15px; border: none; border-radius: 4px; margin: 10px 0; cursor: pointer;">Recupero Diretto Messaggi</button>
+            
+            <!-- Aggiungi pulsante di emergenza per visualizzazione messaggi -->
+            <button id="emergencyButton" style="background-color: #dc3545; color: white; padding: 8px 15px; border: none; border-radius: 4px; margin: 10px 0 10px 10px; cursor: pointer;">Visualizza Messaggi Emergenza</button>
+        </div>
+    </div>
+
+    <!-- Librerie necessarie -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+    
+    <!-- Importa il nostro wrapper Succus -->
+    <script src="wrapper.js"></script>
+    <script>
+        console.log("Inizializzazione applicazione di chat...");
+        
+        // Avvia Gun con option defaults
+        window.gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        
+        // Event listener per il pulsante Ricarica chat
+        document.getElementById('refreshChat').addEventListener('click', function() {
+            if (currentRecipient) {
+                directFetchMessages(currentRecipient);
+            } else {
+                const recipientAddr = document.getElementById('recipientAddress').value.trim();
+                if (recipientAddr) {
+                    directFetchMessages(recipientAddr);
+                } else {
+                    alert('Nessuna chat attiva. Connettiti prima a una chat.');
+                }
+            }
+        });
+        
+        // Aggiungiamo l'event listener per l'invio con tasto Invio
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Event listener per il pulsante di debug
+        document.getElementById('debugButton').addEventListener('click', function() {
+            if (currentRecipient) {
+                exploreAndDisplayChatMessages(currentRecipient);
+            } else {
+                alert('Nessuna chat attiva. Connettiti prima a una chat.');
+            }
+        });
+        
+        // Esegui l'inizializzazione all'avvio
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("DOM caricato, inizializzazione...");
+            
+            // Controlla se esiste già un keypair
+            if (window.localStorage.getItem('gunKeyPair')) {
+                try {
+                    const storedKeyPair = JSON.parse(window.localStorage.getItem('gunKeyPair'));
+                    window.gunKeyPair = storedKeyPair;
+                    console.log("Keypair caricato dal localStorage:", storedKeyPair);
+                    
+                    // Aggiorna l'UI per mostrare che abbiamo un keypair
+                    document.getElementById('keypair-status').textContent = 'Keypair caricato dal localStorage';
+                    document.getElementById('keypair-status').style.color = 'green';
+                } catch (error) {
+                    console.error("Errore nel caricamento del keypair dal localStorage:", error);
+                }
+            } else {
+                console.log("Nessun keypair trovato nel localStorage");
+                // Non generiamo automaticamente un keypair, lasciamo che l'utente lo faccia
+            }
+        });
+        
+        // Debug function: controlla keypair presenti in Gun
+        const debugKeypairs = async () => {
+            console.log("### DEBUG KEYPAIRS ###");
+            
+            try {
+                const results = await window.succus.debug.inspectGunKeypairs();
+                console.log("Keypairs trovati in Gun:", results.total);
+                console.log("#####################");
+            } catch (error) {
+                console.error("Errore durante il debug dei keypair:", error);
+            }
+        };
+        
+        // Debug function: controlla messaggi nel namespace attuale
+        const debugCurrentChat = async () => {
+            console.log("### DEBUG CURRENT CHAT ###");
+            
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                console.error("Nessun destinatario valido inserito");
+                return;
+            }
+            
+            // Genera il namespace
+            const normalizedRecipient = userAddress.toLowerCase();
+            const normalizedSender = recipientAddr.toLowerCase();
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            console.log("Namespace della chat:", chatNamespace);
+            
+            // Svuota il container dei messaggi e inserisci un indicatore di caricamento
+            messagesContainer.innerHTML = '<div style="text-align: center; padding: 10px; color: #888;">Analisi messaggi in corso...</div>';
+            
+            // Esplora direttamente il namespace in Gun
+            console.log("Esploro direttamente il namespace...");
+            window.gun.get(chatNamespace).once((data) => {
+                console.log("Dati principali del namespace:", data);
+                
+                // Conta quanti messaggi ci sono
+                let count = 0;
+                for (let key in data) {
+                    if (key !== '_' && key !== '#') {
+                        count++;
+                    }
+                }
+                
+                console.log(`Trovate ${count} chiavi nel namespace (escludendo metadati Gun)`);
+                
+                // Se ci sono messaggi, li esaminiamo
+                if (count > 0) {
+                    // Resetta il container
+                    messagesContainer.innerHTML = '';
+                    
+                    // Crea un array per raccogliere tutti i messaggi da ordinare
+                    const messagesToShow = [];
+                    let processedCount = 0;
+                    
+                    window.gun.get(chatNamespace).map().once(async (msgData, key) => {
+                        if (key === '_' || !msgData) return;
+                        
+                        processedCount++;
+                        
+                        console.log(`Messaggio ${key}:`, {
+                            from: msgData.from && msgData.from.substring(0, 10) + "...",
+                            to: msgData.to && msgData.to.substring(0, 10) + "...",
+                            date: msgData.date ? new Date(msgData.date).toLocaleString() : "N/A",
+                            hasEncrypted: !!msgData.encryptedMSG
+                        });
+                        
+                        // Se il messaggio ha un contenuto crittografato, prova a decifrarlo
+                        if (msgData.encryptedMSG) {
+                            try {
+                                // Tenta di decifrare
+                                console.log("Tentativo di decrittazione per debug...");
+                                const decrypted = await window.succus.decryptMessage(msgData, window.gunKeyPair);
+                                
+                                // Preparazione dati messaggio
+                                const isSentByMe = msgData.from.toLowerCase() === normalizedRecipient;
+                                const timestamp = msgData.date || Date.now();
+                                const messageTime = new Date(timestamp);
+                                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                                
+                                // Aggiunta alla lista dei messaggi da visualizzare
+                                messagesToShow.push({
+                                    key,
+                                    decrypted,
+                                    isSentByMe,
+                                    timestamp,
+                                    from: msgData.from,
+                                    to: msgData.to,
+                                    timeString
+                                });
+                                
+                                console.log(`DEBUG: Messaggio decodificato: "${decrypted}"`);
+                            } catch (err) {
+                                console.error("Impossibile decifrare il messaggio:", err);
+                                
+                                // Aggiungi un messaggio di errore
+                                messagesToShow.push({
+                                    key,
+                                    decrypted: `[Errore decrittazione: ${err.message}]`,
+                                    isSentByMe: false,
+                                    timestamp: msgData.date || Date.now(),
+                                    from: msgData.from,
+                                    to: msgData.to,
+                                    isError: true,
+                                    timeString: new Date(msgData.date || Date.now()).toLocaleString()
+                                });
+                            }
+                        }
+                    });
+                    
+                    // Attendiamo un po' per assicurarci che tutti i messaggi siano stati processati
+                    setTimeout(() => {
+                        console.log(`Processati ${processedCount} messaggi, ${messagesToShow.length} decrittati`);
+                        
+                        // Se abbiamo messaggi decodificati, li visualizziamo
+                        if (messagesToShow.length > 0) {
+                            // Ordina per timestamp
+                            messagesToShow.sort((a, b) => a.timestamp - b.timestamp);
+                            
+                            // Visualizza i messaggi
+                            messagesToShow.forEach(msg => {
+                                const messageElement = document.createElement('div');
+                                messageElement.className = msg.isError ? 'message' : (msg.isSentByMe ? 'message sent' : 'message received');
+                                messageElement.setAttribute('data-msg-id', `debug_${msg.key}`);
+                                messageElement.innerHTML = `
+                                    ${msg.decrypted}
+                                    <div class="meta">
+                                        ${msg.timeString}
+                                        <span class="message-sender">${msg.isSentByMe ? 'Tu' : msg.from.slice(0, 6) + '...'}</span>
+                                        ${msg.isError ? '<span style="color:red">(Errore decrittazione)</span>' : ''}
+                                    </div>
+                                `;
+                                
+                                messagesContainer.appendChild(messageElement);
+                            });
+                            
+                            // Scorri verso il basso
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        } else {
+                            messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Nessun messaggio decifrabile trovato.</div>';
+                        }
+                        
+                        // Mostra la finestra di conferma dopo un po'
+                        setTimeout(() => {
+                            if (messagesToShow.length === 0 && confirm("Nessun messaggio decifrabile trovato. Vuoi provare a caricare i messaggi con la funzione standard?")) {
+                                exploreAndDisplayChatMessages(recipientAddr);
+                            }
+                        }, 2000);
+                    }, 2000);
+                } else {
+                    messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Nessun messaggio trovato in questo namespace.</div>';
+                }
+            });
+            
+            console.log("#####################");
+        };
+
+        // Esegui debug all'avvio
+        debugKeypairs();
+        
+        // Elementi DOM
+        // Recuperiamo tutti gli elementi DOM richiesti
+        const container = document.querySelector('.container');
+        const chatContainer = document.querySelector('.chat-container');
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('message');
+        const conversationsList = document.getElementById('conversations-list');
+        const debugResultsContainer = document.getElementById('debug-results');
+        
+        // Variabili per tracciare le conversazioni e i messaggi
+        let activeConversations = new Set();
+        let processedMessages = new Set(); // Per evitare messaggi duplicati
+        
+        // Variabile per tenere traccia del destinatario attuale
+        let currentRecipient = null;
+        
+        // Funzione per connettere il wallet
+        const connectWallet = async () => {
+            try {
+                provider = await succus.getProvider();
+                if (!provider) return;
+                
+                const signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                wallet = signer;
+                
+                // Memorizza l'indirizzo dell'utente corrente
+                window.currentUserAddress = userAddress;
+                
+                walletInfoEl.innerHTML = `
+                    <p>Wallet connesso!</p>
+                    <p>Indirizzo: <code>${userAddress}</code></p>
+                `;
+                
+                generateKeypairBtn.disabled = false;
+                
+                // Cerca se esiste già un keypair per questo indirizzo
+                checkExistingKeypair();
+                
+            } catch (error) {
+                console.error("Errore durante la connessione al wallet:", error);
+                alert("Errore durante la connessione al wallet. Controlla la console per i dettagli.");
+            }
+        };
+        
+        // Verifica se esiste già un keypair per questo indirizzo
+        const checkExistingKeypair = async () => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    console.log('Verifico se esiste già un keypair per', userAddress);
+                    
+                    // Verifica se c'è un keypair nella memoria della sessione corrente
+                    if (window.gunKeyPair && window.currentUserAddress === userAddress) {
+                        console.log('✓ Keypair già presente in memoria per questa sessione');
+                        gunKeyPair = window.gunKeyPair;
+                        
+                        keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
+                        
+                        // Verifica che il keypair sia completo
+                        if (gunKeyPair.priv && gunKeyPair.epriv && gunKeyPair.pub && gunKeyPair.epub) {
+                            console.log('✓ Il keypair è completo e valido');
+                        } else {
+                            console.warn('⚠️ Il keypair in memoria non è completo:', {
+                                pub: !!gunKeyPair.pub,
+                                epub: !!gunKeyPair.epub,
+                                priv: !!gunKeyPair.priv,
+                                epriv: !!gunKeyPair.epriv
+                            });
+                        }
+                        
+                        // Verifica la connessione a Gun
+                        console.log('Verifica connessione Gun...');
+                        const gunStatus = await window.succus.debug.testGunConnection();
+                        console.log('Stato connessione Gun:', gunStatus);
+                        
+                        // Mostra la sezione chat
+                        chatSection.style.display = 'block';
+                        
+                        resolve(window.gunKeyPair);
+                        return;
+                    }
+                    
+                    // Controlla se esiste un keypair in Gun
+                    console.log('Controllo keypair in Gun...');
+                    const existingKeypair = await window.succus.getKeypair(userAddress);
+                    
+                    if (existingKeypair && existingKeypair.pub && existingKeypair.epub) {
+                        console.log('✓ Trovata parte pubblica in Gun:', {
+                            pub: existingKeypair.pub.substring(0, 10) + "...",
+                            epub: existingKeypair.epub.substring(0, 10) + "..."
+                        });
+                        
+                        // Se abbiamo anche le chiavi private in memoria, utilizziamo il keypair completo
+                        if (window.gunKeyPair && window.gunKeyPair.priv && window.gunKeyPair.epriv) {
+                            console.log('✓ Keypair completo disponibile in memoria');
+                            gunKeyPair = window.gunKeyPair;
+                            
+                            keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
+                            
+                            // Mostra la sezione chat
+                            chatSection.style.display = 'block';
+                            
+                            resolve(window.gunKeyPair);
+                            return;
+                        }
+                        
+                        // Se troviamo solo le chiavi pubbliche, informiamo l'utente
+                        keyPairStatusElement.innerHTML = `
+                            <span class="warning">⚠️ Solo chiavi pubbliche trovate</span>
+                            <button id="generateNewKeypairBtn" class="custom-button">Genera keypair completo</button>
+                        `;
+                        
+                        document.getElementById('generateNewKeypairBtn').addEventListener('click', () => {
+                            generateNewKeypair().then(() => {
+                                // Dopo aver generato un nuovo keypair, inizializza la UI
+                                chatSection.style.display = 'block';
+                            });
+                        });
+                        
+                        resolve(null);
+                        return;
+                    }
+                    
+                    console.log('Nessun keypair trovato, è necessario generarne uno nuovo');
+                    // Se non troviamo un keypair, generiamo un nuovo keypair
+                    keyPairStatusElement.innerHTML = `
+                        <span class="warning">❌ Nessun keypair trovato</span>
+                        <button id="generateNewKeypairBtn" class="custom-button">Genera nuovo keypair</button>
+                    `;
+                    
+                    document.getElementById('generateNewKeypairBtn').addEventListener('click', () => {
+                        generateNewKeypair();
+                    });
+                    
+                    resolve(null);
+                } catch (error) {
+                    console.error('Errore durante la verifica del keypair:', error);
+                    keyPairStatusElement.innerHTML = `<span class="error">Errore: ${error.message}</span>`;
+                    reject(error);
+                }
+            });
+        };
+        
+        // Funzione per generare un keypair
+        const generateNewKeypair = async () => {
+            try {
+                // Verifica se esiste già un keypair in Gun
+                const hasKeypair = await window.succus.hasKeypair(userAddress);
+                
+                // Genera una nuova coppia di chiavi (parte pubblica e privata)
+                gunKeyPair = await succus.SEA.pair();
+                console.log("Nuovo keypair generato:", {
+                    pub: gunKeyPair.pub ? gunKeyPair.pub.substring(0, 15) + "..." : "mancante",
+                    epub: gunKeyPair.epub ? gunKeyPair.epub.substring(0, 15) + "..." : "mancante",
+                    priv: gunKeyPair.priv ? "presente" : "mancante",
+                    epriv: gunKeyPair.epriv ? "presente" : "mancante"
+                });
+                
+                // Memorizza il keypair completo per questa sessione
+                window.gunKeyPair = gunKeyPair;
+                
+                // Registra la parte pubblica della chiave in Gun
+                await succus.storeKeypair(userAddress, gunKeyPair);
+                
+                // Spiega all'utente cosa stiamo facendo
+                let keysMessage = "Nuovo keypair generato e registrato!";
+                if (hasKeypair) {
+                    keysMessage += "<p><small>Nota: è stato sovrascritto un keypair pubblico esistente.</small></p>";
+                }
+                
+                walletInfoEl.innerHTML += `
+                    <p>${keysMessage}</p>
+                    <p><small>Questo permette agli altri utenti di crittografare messaggi per te</small></p>
+                `;
+                
+                chatSection.style.display = 'block';
+                
+            } catch (error) {
+                console.error("Errore durante la generazione del keypair:", error);
+                alert("Errore durante la generazione del keypair. Controlla la console per i dettagli.");
+            }
+        };
+        
+        // Funzione per inviare un messaggio utilizzando direttamente succus.sendmessage
+        const sendMessage = async () => {
+            const message = messageInput.value.trim();
+            const recipientAddress = recipientAddressInput.value.trim();
+            
+            if (!message || !recipientAddress) {
+                alert("Per favore inserisci sia un messaggio che un indirizzo destinatario.");
+                return;
+            }
+            
+            try {
+                // Debug dei keypair prima di inviare
+                await debugKeypairs();
+                
+                // Aggiungi un messaggio di attesa
+                const loadingMsg = document.createElement('div');
+                loadingMsg.classList.add('message', 'sent');
+                loadingMsg.innerHTML = `Invio in corso...`;
+                messagesContainer.appendChild(loadingMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Calcola il namespace che verrà usato per salvare il messaggio
+                const normalizedSender = userAddress.toLowerCase();
+                const normalizedRecipient = recipientAddress.toLowerCase();
+                const participants = [normalizedSender, normalizedRecipient].sort();
+                const sortedParticipants = participants.join("");
+                const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+                
+                console.log(`INVIO - Namespace calcolato: ${chatNamespace}`);
+                console.log(`INVIO - Partecipanti ordinati: ${participants.join(", ")}`);
+                
+                // Verifica che il destinatario abbia registrato una chiave pubblica
+                console.log(`Verifica keypair per destinatario ${recipientAddress}`);
+                const recipientPubKey = await succus.getKeypair(recipientAddress);
+                
+                if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+                    // Rimuovi il messaggio di caricamento
+                    messagesContainer.removeChild(loadingMsg);
+                    
+                    console.error(`Keypair non valido per il destinatario ${recipientAddress}:`, recipientPubKey);
+                    
+                    // Prova ad auto-generare una chiave pubblica per test (solo in ambiente demo)
+                    if (confirm(`Il destinatario ${recipientAddress} non ha un keypair valido. Vuoi generare una chiave pubblica per questo utente (solo per test)?`)) {
+                        const tempKeyPair = await succus.SEA.pair();
+                        const publicPart = {
+                            pub: tempKeyPair.pub,
+                            epub: tempKeyPair.epub
+                        };
+                        
+                        // Registra la parte pubblica in Gun
+                        await succus.registerKeypair(recipientAddress, publicPart);
+                        
+                        console.log(`Keypair pubblico generato e salvato per ${recipientAddress}:`, publicPart);
+                        alert(`Keypair pubblico generato per ${recipientAddress}. Riprova a inviare il messaggio.`);
+                        return;
+                    }
+                    
+                    alert(`Il destinatario ${recipientAddress} non ha un keypair valido. Non può ricevere messaggi.`);
+                    return;
+                }
+                
+                console.log(`Keypair valido trovato per ${recipientAddress}, procedo con l'invio`);
+                console.log(`Chiavi pubbliche del destinatario:`, {
+                    pub: recipientPubKey.pub ? recipientPubKey.pub.substring(0, 15) + "..." : "mancante",
+                    epub: recipientPubKey.epub ? recipientPubKey.epub.substring(0, 15) + "..." : "mancante"
+                });
+                
+                // Invia il messaggio usando la libreria Succus
+                const result = await succus.sendmessage(message, [recipientAddress], gunKeyPair);
+                
+                // Rimuovi il messaggio di caricamento
+                messagesContainer.removeChild(loadingMsg);
+                
+                if (result.sent) {
+                    console.log(`Messaggio inviato con successo a ${recipientAddress}:`, message);
+                    console.log(`Messaggio salvato nel namespace: ${chatNamespace}`);
+                    
+                    // Pulisci l'input del messaggio
+                    messageInput.value = '';
+                    
+                    // Genera un ID univoco per il messaggio
+                    const uniqueId = `sent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                    
+                    // Aggiungi il messaggio all'interfaccia
+                    const messageTime = new Date();
+                    const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message sent';
+                    messageElement.setAttribute('data-msg-id', uniqueId);
+                    messageElement.innerHTML = `
+                        ${message}
+                        <div class="meta">
+                            ${timeString}
+                            <span class="message-sender">Tu</span>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(messageElement);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // Forzare un ulteriore salvataggio per assicurarsi che il messaggio venga effettivamente memorizzato
+                    console.log("Forzo un ulteriore salvataggio del messaggio per sicurezza...");
+                    try {
+                        // Creare un oggetto dati identico a quello usato in sendmessage
+                        const messageData = {
+                            date: Date.now(),
+                            from: userAddress,
+                            to: recipientAddress,
+                            text: message // Aggiunto per debug
+                        };
+                        
+                        // Salvare direttamente nel namespace per garantire la persistenza
+                        window.gun.get(chatNamespace).set(messageData, (ack) => {
+                            if (ack.err) {
+                                console.error("Errore nel salvataggio di backup:", ack.err);
+                            } else {
+                                console.log("Salvataggio di backup completato");
+                            }
+                        });
+                    } catch (backupErr) {
+                        console.error("Errore nel tentativo di salvataggio di backup:", backupErr);
+                    }
+                    
+                    // Attendiamo un po' prima di attivare il listener per evitare race condition
+                    console.log("Attendo 1 secondo prima di avviare il listener...");
+                    setTimeout(() => {
+                        // Verifica diretta se il messaggio esiste nel database Gun
+                        console.log(`Verifica se il messaggio è stato salvato in Gun...`);
+                        window.gun.get(chatNamespace).once((data) => {
+                            console.log(`Contenuto del namespace ${chatNamespace}:`, data);
+                            
+                            if (!data) {
+                                console.error("Nessun dato trovato nel namespace dopo l'invio!");
+                                return;
+                            }
+                            
+                            // Conta quanti messaggi ci sono
+                            let count = 0;
+                            for (let key in data) {
+                                if (key !== '_' && key !== '#') {
+                                    count++;
+                                }
+                            }
+                            
+                            console.log(`Trovati ${count} messaggi nel namespace dopo l'invio`);
+                            
+                            // Se ci sono messaggi, avvia la ricezione
+                            if (count > 0) {
+                                // Forza il recupero diretto invece dell'ascolto
+                                console.log("Forzo il recupero diretto dei messaggi dopo l'invio");
+                                exploreAndDisplayChatMessages(recipientAddress);
+                            } else {
+                                // Se non ci sono messaggi, avvia l'ascolto normale
+                                startListeningToConversation(recipientAddress);
+                            }
+                        });
+                    }, 5000); // Aumento il timeout per dare più tempo a Gun di sincronizzare
+                } else {
+                    console.error(`Errore nell'invio del messaggio:`, result.why);
+                    alert("Errore durante l'invio del messaggio: " + (result.why ? result.why.message || result.why : "Errore sconosciuto"));
+                }
+                
+            } catch (error) {
+                console.error("Errore durante l'invio del messaggio:", error);
+                alert("Errore durante l'invio del messaggio: " + error.message);
+            }
+        };
+        
+        // Nuova funzione per verificare e aggiornare la conversazione se necessario
+        const checkAndRefreshConversation = async (recipientAddr) => {
+            console.log(`Verifico se è necessario ricaricare la conversazione con ${recipientAddr}...`);
+            
+            // Crea il namespace 
+            const normalizedRecipient = userAddress.toLowerCase();
+            const normalizedSender = recipientAddr.toLowerCase();
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            // Controlla quanti messaggi ci sono nel database
+            window.gun.get(chatNamespace).once((data) => {
+                if (!data) return;
+                
+                // Conta i messaggi nel DOM
+                const displayedMsgs = document.querySelectorAll('.message[data-msg-id]').length;
+                
+                // Conta i messaggi nel database (esclusi metadati Gun)
+                let databaseMsgs = 0;
+                for (let key in data) {
+                    if (key !== '_' && key !== '#') {
+                        databaseMsgs++;
+                    }
+                }
+                
+                console.log(`Controllo completato: ${displayedMsgs} messaggi visualizzati, ${databaseMsgs} nel database`);
+                
+                // Se c'è discrepanza, ricarica
+                if (databaseMsgs > displayedMsgs) {
+                    console.log(`Rilevata discrepanza nei messaggi (${displayedMsgs} vs ${databaseMsgs}), ricarico la chat...`);
+                    
+                    // Usa il recupero diretto invece di riaprire il listener
+                    exploreAndDisplayChatMessages(recipientAddr);
+                }
+            });
+        };
+        
+        // Funzione per avviare l'ascolto dei messaggi della conversazione
+        async function startListeningToConversation(recipientAddr) {
+            if (!gunKeyPair || !recipientAddr) return;
+            
+            console.log("Avvio ascolto conversazione con:", recipientAddr);
+            showActiveChat(recipientAddr);
+            
+            // Prima recupera i messaggi esistenti con il metodo diretto
+            await directFetchMessages(recipientAddr);
+            
+            // Quindi imposta un timer per il recupero periodico
+            if (window.fetchMessagesInterval) {
+                clearInterval(window.fetchMessagesInterval);
+            }
+            
+            window.fetchMessagesInterval = setInterval(() => {
+                // Recupera messaggi in modalità silenziosa (non cancella i messaggi esistenti)
+                directFetchMessages(recipientAddr, true);
+            }, 30000); // ogni 30 secondi
+            
+            // Imposta anche il listener standard (come backup)
+            if (window.succus && typeof window.succus.receiveMessage === 'function') {
+                console.log("Impostazione listener standard per i messaggi in arrivo");
+                
+                // Calcoliamo il namespace per la chat nel modo più esplicito possibile
+                const normalizedSender = userAddress.toLowerCase();
+                const normalizedRecipient = recipientAddr.toLowerCase();
+                const participants = [normalizedSender, normalizedRecipient].sort();
+                const sortedParticipants = participants.join("");
+                const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+                
+                console.log("Namespace per listener:", chatNamespace);
+                console.log("Partecipanti (ordinati):", participants.join(", "));
+                
+                window.succus.receiveMessage({
+                    keypair: gunKeyPair,
+                    namespace: chatNamespace, 
+                    callback: function(error, data) {
+                        if (error) {
+                            console.error("Errore nel callback di receiveMessage:", error);
+                            return;
+                        }
+                        
+                        console.log("Nuovo messaggio ricevuto nel callback:", data);
+                        
+                        // Per sicurezza, facciamo un recupero diretto in modalità silenziosa
+                        directFetchMessages(recipientAddr, true);
+                    }
+                });
+            } else {
+                console.error("La funzione receiveMessage non è disponibile");
+            }
+        }
+        
+        // Funzione per visualizzare un messaggio nell'interfaccia
+        const displayMessage = (message, isSent, timestamp, msgId = null) => {
+            // Genera un id per il messaggio se non è fornito
+            const messageId = msgId || `${message}-${timestamp.getTime()}-${isSent ? 'sent' : 'received'}`;
+            
+            // Controlla che il messaggio non sia già visualizzato
+            if (document.querySelector(`.message[data-id="${messageId}"]`) || 
+                (msgId && document.querySelector(`.message[data-msg-id="${msgId}"]`))) {
+                return; // Il messaggio è già visualizzato
+            }
+            
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('message');
+            messageEl.classList.add(isSent ? 'sent' : 'received');
+            messageEl.setAttribute('data-id', messageId);
+            if (msgId) {
+                messageEl.setAttribute('data-msg-id', msgId);
+            }
+            
+            messageEl.innerHTML = `
+                ${message}
+                <div class="meta">${formatDate(timestamp)}</div>
+            `;
+            
+            messagesContainer.appendChild(messageEl);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        
+        // Funzione per formattare la data
+        const formatDate = (date) => {
+            return date.toLocaleTimeString() + ' ' + date.toLocaleDateString();
+        };
+        
+        // Event listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        generateKeypairBtn.addEventListener('click', generateNewKeypair);
+        sendMessageBtn.addEventListener('click', sendMessage);
+        
+        // Debug button
+        document.getElementById('debugButton').addEventListener('click', async () => {
+            await debugKeypairs();
+            
+            // Nuovo debug della chat corrente 
+            await debugCurrentChat();
+            
+            // Pulisci i messaggi duplicati
+            const clearDuplicates = confirm("Vuoi pulire i messaggi duplicati?");
+            if (clearDuplicates) {
+                processedMessages.clear();
+                activeConversations.clear();
+                messagesContainer.innerHTML = '';
+                alert("Messaggi duplicati puliti. Inserisci di nuovo l'indirizzo del destinatario per ricaricare la conversazione.");
+            }
+            
+            // Richiedi di eseguire altre azioni di debug
+            const options = [
+                "Pulisci keypair da Gun",
+                "Genera keypair per un altro indirizzo",
+                "Mostra conversazioni attive",
+                "Ripristina keypair corrente",
+                "Esplora chat corrente",
+                "Cancella"
+            ];
+            
+            const action = prompt(`Seleziona un'azione di debug (inserisci il numero):\n${options.map((o, i) => `${i+1}. ${o}`).join('\n')}`);
+            
+            if (action === "1") {
+                if (confirm("Sei sicuro di voler pulire tutti i keypair da Gun?")) {
+                    const result = await succus.debug.cleanGunKeypairs();
+                    alert(result);
+                }
+            } else if (action === "2") {
+                const otherAddress = prompt("Inserisci l'indirizzo per cui vuoi generare un keypair pubblico:");
+                if (otherAddress && otherAddress.startsWith("0x")) {
+                    const tempKeyPair = await succus.SEA.pair();
+                    const publicPart = {
+                        pub: tempKeyPair.pub,
+                        epub: tempKeyPair.epub
+                    };
+                    
+                    // Registra la parte pubblica in Gun
+                    await succus.registerKeypair(otherAddress, publicPart);
+                    
+                    console.log(`Keypair pubblico generato per ${otherAddress}:`, publicPart);
+                    alert(`Keypair pubblico generato per ${otherAddress}.`);
+                    await debugKeypairs();
+                }
+            } else if (action === "3") {
+                const conversations = await succus.debugConversations();
+                console.log("Conversazioni trovate:", conversations);
+                alert(`${conversations.length} conversazioni trovate. Vedi console per dettagli.`);
+            } else if (action === "4") {
+                // Funzione per ripristinare il keypair corrente
+                if (confirm("Vuoi rigenerare il keypair corrente?")) {
+                    // Genera un nuovo keypair e lo registra
+                    await generateNewKeypair();
+                    alert("Keypair rigenerato con successo.");
+                }
+            } else if (action === "5") {
+                // Esplora la chat corrente
+                const recipientAddr = recipientAddressInput.value.trim();
+                if (recipientAddr && recipientAddr.startsWith('0x')) {
+                    console.log("Esplorazione chat con", recipientAddr);
+                    const result = await window.succus.debug.exploreChat(userAddress, recipientAddr);
+                    console.log("Risultato esplorazione:", result);
+                    
+                    if (result.messages && result.messages.length > 0) {
+                        alert(`Trovati ${result.messages.length} messaggi nella chat. Vedi console per dettagli.`);
+                    } else {
+                        alert("Nessun messaggio trovato per questa chat.");
+                    }
+                } else {
+                    alert("Inserisci prima un indirizzo destinatario valido");
+                }
+            }
+        });
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Quando un destinatario viene inserito, inizia ad ascoltare i messaggi
+        recipientAddressInput.addEventListener('change', () => {
+            const recipientAddress = recipientAddressInput.value.trim();
+            if (recipientAddress && userAddress && gunKeyPair) {
+                startListeningToConversation(recipientAddress);
+            }
+        });
+        
+        // Refresh chat button
+        document.getElementById('refreshChat').addEventListener('click', async () => {
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                alert("Inserisci prima un indirizzo destinatario valido");
+                return;
+            }
+            
+            // Pulisci i messaggi visualizzati
+            messagesContainer.innerHTML = '';
+            
+            // Usa la nuova funzione per leggere e mostrare direttamente i messaggi
+            try {
+                await exploreAndDisplayChatMessages(recipientAddr);
+                console.log("Chat ricaricata per", recipientAddr);
+            } catch (error) {
+                console.error("Errore nella ricarica chat:", error);
+            }
+        });
+        
+        // Funzione che recupera e mostra i messaggi direttamente da Gun
+        async function exploreAndDisplayChatMessages(recipientAddr) {
+            console.log("=== RECUPERO DIRETTO MESSAGGI ===");
+            console.log("Recupero diretto messaggi per chat con:", recipientAddr);
+            
+            if (!userAddress || !window.gunKeyPair) {
+                console.error("Keypair o indirizzo utente non disponibili");
+                return;
+            }
+            
+            // Genera il namespace della chat
+            const normalizedRecipient = userAddress.toLowerCase();
+            const normalizedSender = recipientAddr.toLowerCase();
+            
+            // Attenzione: ordiniamo stringhe di indirizzi
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            console.log("RECUPERO - Namespace della chat:", chatNamespace);
+            console.log("RECUPERO - Partecipanti conversazione:", participants.join(", "));
+            
+            // Log completo dei dati utilizzati
+            console.log("Dettagli completi recupero:");
+            console.log("- Mittente:", normalizedRecipient);
+            console.log("- Destinatario:", normalizedSender);
+            console.log("- Ordinati?", [normalizedSender, normalizedRecipient].sort().join("") === sortedParticipants);
+            
+            // Mostra un messaggio di caricamento con più dettagli
+            messagesContainer.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div>Caricamento messaggi in corso...</div>
+                    <div style="color: #888; font-size: 12px; margin-top: 5px;">
+                        Namespace: ${chatNamespace}<br>
+                        Indirizzo mittente: ${normalizedRecipient}<br>
+                        Indirizzo destinatario: ${normalizedSender}
+                    </div>
+                </div>
+            `;
+            
+            // Accesso diretto al namespace in Gun per debug
+            console.log("RECUPERO - Verifica diretta contenuto namespace");
+            let hasContent = false;
+            
+            try {
+                // Verifica diretta se ci sono dati nel namespace
+                await new Promise((resolve) => {
+                    window.gun.get(chatNamespace).once((data) => {
+                        console.log(`RECUPERO - Contenuto diretto del namespace:`, data);
+                        
+                        if (data) {
+                            let msgCount = 0;
+                            // Conta i messaggi (escludendo metadati Gun)
+                            for (let key in data) {
+                                if (key !== '_' && key !== '#') {
+                                    msgCount++;
+                                    console.log(`RECUPERO - Trovata chiave ${key} nel namespace`);
+                                }
+                            }
+                            console.log(`RECUPERO - Trovate ${msgCount} chiavi (messaggi) nel namespace`);
+                            hasContent = msgCount > 0;
+                        } else {
+                            console.log("RECUPERO - Namespace vuoto o non esistente");
+                        }
+                        resolve();
+                    });
+                });
+            } catch (err) {
+                console.error("RECUPERO - Errore durante la verifica diretta:", err);
+            }
+            
+            if (!hasContent) {
+                console.log("RECUPERO - Nessun contenuto trovato nella verifica preliminare");
+            }
+            
+            // Verifica che il keypair del destinatario esista
+            console.log("Verifica keypair del destinatario...");
+            const recipientKeyPair = await window.succus.getKeypair(recipientAddr);
+            if (!recipientKeyPair || !recipientKeyPair.epub) {
+                console.error(`Keypair del destinatario ${recipientAddr} non trovato o invalido`);
+                messagesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #d9534f;">
+                        <div>Errore: Keypair del destinatario non trovato</div>
+                        <div style="margin-top: 10px;">
+                            <button id="generateRecipientKey" style="background-color: #5bc0de;">
+                                Genera keypair per il destinatario (test)
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Aggiungi event listener per il pulsante
+                document.getElementById('generateRecipientKey').addEventListener('click', async () => {
+                    try {
+                        const tempKeyPair = await succus.SEA.pair();
+                        const publicPart = {
+                            pub: tempKeyPair.pub,
+                            epub: tempKeyPair.epub
+                        };
+                        
+                        // Registra la parte pubblica in Gun
+                        await succus.registerKeypair(recipientAddr, publicPart);
+                        
+                        console.log(`Keypair pubblico generato per ${recipientAddr}`);
+                        alert(`Keypair pubblico generato per ${recipientAddr}. Prova a inviare un messaggio.`);
+                    } catch (error) {
+                        console.error("Errore generazione keypair:", error);
+                        alert("Errore durante la generazione del keypair: " + error.message);
+                    }
+                });
+                
+                return;
+            }
+            
+            console.log("Keypair del destinatario trovato:", {
+                pub: recipientKeyPair.pub ? "presente" : "mancante",
+                epub: recipientKeyPair.epub ? "presente" : "mancante"
+            });
+            
+            // Crea lo shared secret per decifrare i messaggi
+            try {
+                console.log("Creazione shared secret per decrittazione...");
+                const sharedSecret = await window.succus.createSharedSecret(recipientAddr, window.gunKeyPair);
+                console.log("Shared secret creato con successo");
+            } catch (error) {
+                console.error("Errore creazione shared secret:", error);
+                messagesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #d9534f;">
+                        Errore nella creazione del segreto condiviso: ${error.message}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Ottieni tutti i messaggi da questo namespace 
+            // Utilizziamo una doppia strategia per assicurarci di catturare tutti i messaggi
+            let allMessages = [];
+            
+            // Prima strategia: usa map().once()
+            console.log("RECUPERO - Prima strategia: map().once()");
+            await new Promise((resolve) => {
+                let timeoutId = setTimeout(() => {
+                    console.log("RECUPERO - Timeout strategia map().once()");
+                    resolve();
+                }, 10000);
+                
+                window.gun.get(chatNamespace).map().once((data, key) => {
+                    if (key === '_' || !data) return;
+                    
+                    console.log(`RECUPERO - Trovato messaggio (strategia 1) [${key}]`);
+                    
+                    // Verifica se c'è già un messaggio con questa chiave
+                    if (!allMessages.some(msg => msg.key === key)) {
+                        allMessages.push({key, data, strategy: 1});
+                    }
+                    
+                    // Se abbiamo trovato almeno un messaggio, non aspettiamo il timeout completo
+                    if (allMessages.length > 0) {
+                        clearTimeout(timeoutId);
+                        resolve();
+                    }
+                });
+            });
+            
+            console.log(`RECUPERO - Prima strategia: trovati ${allMessages.length} messaggi`);
+            
+            // Seconda strategia: lettura diretta
+            console.log("RECUPERO - Seconda strategia: lettura diretta");
+            await new Promise((resolve) => {
+                window.gun.get(chatNamespace).once((data) => {
+                    if (!data) {
+                        resolve();
+                        return;
+                    }
+                    
+                    let promises = [];
+                    
+                    // Per ogni chiave nel namespace, tranne i metadati
+                    for (let key in data) {
+                        if (key === '_' || key === '#') continue;
+                        
+                        // Verifica se c'è già un messaggio con questa chiave
+                        if (allMessages.some(msg => msg.key === key)) continue;
+                        
+                        console.log(`RECUPERO - Trovata chiave ${key} (strategia 2)`);
+                        
+                        // Ottieni il valore associato alla chiave
+                        promises.push(new Promise((resolveKey) => {
+                            window.gun.get(chatNamespace).get(key).once((msgData) => {
+                                if (msgData) {
+                                    console.log(`RECUPERO - Trovato messaggio (strategia 2) [${key}]`);
+                                    allMessages.push({key, data: msgData, strategy: 2});
+                                }
+                                resolveKey();
+                            });
+                        }));
+                    }
+                    
+                    // Aspetta che tutte le promesse siano risolte
+                    Promise.all(promises).then(() => {
+                        resolve();
+                    });
+                });
+            });
+            
+            console.log(`RECUPERO - Totale messaggi trovati: ${allMessages.length}`);
+            
+            // Se non abbiamo trovato messaggi, mostra un messaggio appropriato
+            if (allMessages.length === 0) {
+                console.log("RECUPERO - Nessun messaggio trovato nelle due strategie");
+                messagesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="margin-bottom: 10px;">Nessun messaggio trovato in questo namespace</div>
+                        <button id="forceDebugBtn" style="background-color: #f0ad4e;">
+                            Forza Debug della Chat
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('forceDebugBtn').addEventListener('click', () => {
+                    debugCurrentChat();
+                });
+                
+                return;
+            }
+            
+            // Ordina i messaggi per data
+            allMessages.sort((a, b) => {
+                const dateA = a.data.date || 0;
+                const dateB = b.data.date || 0;
+                return dateA - dateB;
+            });
+            
+            // Mostra l'interfaccia di caricamento
+            messagesContainer.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div>Decrittazione ${allMessages.length} messaggi in corso...</div>
+                    <div style="color: #888; font-size: 12px; margin-top: 5px;">
+                        Messaggi trovati: ${allMessages.length}
+                    </div>
+                </div>
+            `;
+            
+            let decryptedCount = 0;
+            const decryptedMessages = [];
+            
+            // Decrittazione di tutti i messaggi trovati
+            for (const msg of allMessages) {
+                try {
+                    if (!msg.data.encryptedMSG) {
+                        console.log(`RECUPERO - Messaggio ${msg.key} senza contenuto criptato`);
+                        continue;
+                    }
+                    
+                    console.log(`RECUPERO - Tentativo decrittazione messaggio ${msg.key}`);
+                    
+                    // Prova a decrittare il messaggio
+                    const decrypted = await window.succus.decryptMessage(msg.data, window.gunKeyPair);
+                    
+                    if (decrypted) {
+                        decryptedCount++;
+                        const isSentByMe = msg.data.from && msg.data.from.toLowerCase() === normalizedRecipient;
+                        const timestamp = msg.data.date || Date.now();
+                        
+                        decryptedMessages.push({
+                            key: msg.key,
+                            decrypted,
+                            isSentByMe,
+                            timestamp,
+                            sender: msg.data.from,
+                            strategy: msg.strategy
+                        });
+                        
+                        console.log(`RECUPERO - Messaggio ${msg.key} decrittato con successo: "${decrypted}"`);
+                    } else {
+                        console.warn(`RECUPERO - Decrittazione restituisce valore vuoto per ${msg.key}`);
+                    }
+                } catch (err) {
+                    console.error(`RECUPERO - Errore decrittazione messaggio ${msg.key}:`, err);
+                }
+            }
+            
+            console.log(`RECUPERO - Decrittati ${decryptedCount} messaggi su ${allMessages.length}`);
+            
+            // Visualizza i messaggi decrittati
+            if (decryptedMessages.length > 0) {
+                // Ordina per timestamp
+                decryptedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                
+                // Pulisci il container
+                messagesContainer.innerHTML = '';
+                
+                // Visualizza i messaggi
+                for (const msg of decryptedMessages) {
+                    const messageTime = new Date(msg.timestamp);
+                    const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                    
+                    // Crea un ID univoco
+                    const uniqueId = `direct_${msg.key}_${msg.timestamp}`;
+                    
+                    // Verifica se questo messaggio è già visualizzato
+                    if (document.querySelector(`.message[data-msg-id="${uniqueId}"]`)) {
+                        console.log(`RECUPERO - Messaggio ${uniqueId} già visualizzato, salto`);
+                        continue;
+                    }
+                    
+                    console.log(`RECUPERO - Visualizzo messaggio "${msg.decrypted}"`);
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.className = msg.isSentByMe ? 'message sent' : 'message received';
+                    messageElement.setAttribute('data-msg-id', uniqueId);
+                    messageElement.innerHTML = `
+                        ${msg.decrypted}
+                        <div class="meta">
+                            ${timeString}
+                            <span class="message-sender">${msg.isSentByMe ? 'Tu' : msg.sender.slice(0, 6) + '...'}</span>
+                            <span style="font-size: 9px; color: #aaa;">[${msg.strategy}]</span>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(messageElement);
+                }
+                
+                // Scorrimento automatico verso il basso
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else {
+                // Nessun messaggio decrittato
+                messagesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #d9534f;">
+                        <div>Trovati ${allMessages.length} messaggi ma nessuno decifrabile</div>
+                        <div style="margin-top: 10px;">
+                            <button id="forceDebugBtn" style="background-color: #f0ad4e;">
+                                Prova Debug Completo
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('forceDebugBtn').addEventListener('click', () => {
+                    debugCurrentChat();
+                });
+            }
+            
+            console.log("=== FINE RECUPERO DIRETTO ===");
+            return {
+                found: allMessages.length,
+                decrypted: decryptedMessages.length
+            };
+        }
+        
+        // Funzione per forzare l'aggiornamento dei messaggi
+        const forceMessageUpdate = async (recipientAddr) => {
+            if (!recipientAddr || !userAddress || !gunKeyPair) {
+                console.error("Impossibile aggiornare i messaggi: dati mancanti");
+                return;
+            }
+            
+            console.log("Forzo aggiornamento messaggi per", recipientAddr);
+            
+            try {
+                // Pulisci i messaggi visualizzati
+                messagesContainer.innerHTML = '';
+                
+                // Prova prima l'approccio diretto di lettura
+                await exploreAndDisplayChatMessages(recipientAddr);
+                
+                // Se necessario, riavvia anche l'ascolto normale
+                console.log("Riavvio ascolto normale dopo lettura diretta");
+                startListeningToConversation(recipientAddr);
+            } catch (error) {
+                console.error("Errore durante l'aggiornamento forzato:", error);
+                // Fallback al metodo normale
+                startListeningToConversation(recipientAddr);
+            }
+        };
+        
+        // Aggiungi un pulsante per il recupero diretto
+        const directFetchButton = document.getElementById('directFetchButton');
+        
+        // Funzione per il recupero diretto dai messaggi
+        directFetchButton.addEventListener('click', () => {
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                alert("Inserisci un indirizzo destinatario valido");
+                return;
+            }
+            
+            // Mostra un messaggio di caricamento
+            messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Recupero diretto in corso...</div>';
+            
+            // Chiama la funzione di recupero diretto
+            directFetchMessages(recipientAddr);
+        });
+        
+        // Gestione del pulsante di emergenza
+        const emergencyButton = document.getElementById('emergencyButton');
+        emergencyButton.addEventListener('click', () => {
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                alert("Inserisci un indirizzo destinatario valido");
+                return;
+            }
+            
+            // Mostra un messaggio di caricamento
+            messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Recupero messaggi di emergenza in corso...</div>';
+            
+            // Chiama la funzione di recupero di emergenza
+            emergencyFetchMessages(recipientAddr);
+        });
+        
+        // Nuova funzione per il recupero diretto dei messaggi
+        async function directFetchMessages(recipientAddr, silent = false) {
+            console.log("=== RECUPERO SUPER DIRETTO ===");
+            
+            if (!userAddress || !window.gunKeyPair) {
+                console.error("Keypair o indirizzo utente non disponibili");
+                if (!silent) {
+                    messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Errore: keypair o indirizzo utente mancanti</div>';
+                }
+                return;
+            }
+            
+            // Genera il namespace
+            const normalizedRecipient = userAddress.toLowerCase();
+            const normalizedSender = recipientAddr.toLowerCase();
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            console.log("DIRECT - Namespace:", chatNamespace);
+            console.log("DIRECT - Partecipanti:", participants.join(", "));
+            
+            // Array per i messaggi trovati
+            const messages = [];
+            
+            try {
+                // Lettura diretta dal namespace
+                window.gun.get(chatNamespace).once(async (data) => {
+                    console.log("DIRECT - Dati namespace:", data);
+                    
+                    if (!data) {
+                        if (!silent) {
+                            messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Nessun dato trovato nel namespace</div>';
+                        }
+                        return;
+                    }
+                    
+                    // Per ogni chiave nel namespace (escluse le chiavi speciali di Gun)
+                    for (const key in data) {
+                        if (key === '_' || key === '#') continue;
+                        
+                        console.log(`DIRECT - Trovata chiave: ${key}`);
+                        
+                        // Ottieni i dati completi per questa chiave
+                        await new Promise(resolve => {
+                            window.gun.get(chatNamespace).get(key).once(async (msgData) => {
+                                if (!msgData) {
+                                    console.log(`DIRECT - Nessun dato per la chiave ${key}`);
+                                    resolve();
+                                    return;
+                                }
+                                
+                                console.log(`DIRECT - Dati per chiave ${key}:`, msgData);
+                                
+                                // Estrai prima eventuali campi di testo non crittografati
+                                if (msgData.text) {
+                                    // Se il messaggio ha testo in chiaro
+                                    console.log(`DIRECT - Trovato messaggio con testo: "${msgData.text}"`);
+                                    
+                                    const isSentByMe = msgData.from && msgData.from.toLowerCase() === normalizedRecipient;
+                                    const timestamp = msgData.date || Date.now();
+                                    
+                                    messages.push({
+                                        decrypted: msgData.text,
+                                        isSentByMe,
+                                        timestamp,
+                                        from: msgData.from,
+                                        to: msgData.to,
+                                        isUnencrypted: true
+                                    });
+                                    
+                                    resolve();
+                                    return;
+                                }
+                                
+                                // Se il messaggio ha dati di crittografia, prova a decifrarlo
+                                if (msgData.encryptedMSG) {
+                                    try {
+                                        const decrypted = await window.succus.decryptMessage(msgData, window.gunKeyPair);
+                                        
+                                        if (decrypted) {
+                                            const isSentByMe = msgData.from && msgData.from.toLowerCase() === normalizedRecipient;
+                                            const timestamp = msgData.date || Date.now();
+                                            
+                                            messages.push({
+                                                decrypted,
+                                                isSentByMe,
+                                                timestamp,
+                                                from: msgData.from,
+                                                to: msgData.to
+                                            });
+                                            
+                                            console.log(`DIRECT - Messaggio decrittato: "${decrypted}"`);
+                                        } else {
+                                            console.log(`DIRECT - Decrittazione senza risultato per ${key}`);
+                                        }
+                                    } catch (error) {
+                                        console.error(`DIRECT - Errore decrittazione per ${key}:`, error);
+                                    }
+                                } else if (msgData.message) {
+                                    // Altro formato alternativo per il testo
+                                    console.log(`DIRECT - Trovato messaggio in campo 'message': "${msgData.message}"`);
+                                    
+                                    const isSentByMe = msgData.from && msgData.from.toLowerCase() === normalizedRecipient;
+                                    const timestamp = msgData.date || Date.now();
+                                    
+                                    messages.push({
+                                        decrypted: msgData.message,
+                                        isSentByMe,
+                                        timestamp,
+                                        from: msgData.from,
+                                        to: msgData.to,
+                                        isUnencrypted: true
+                                    });
+                                } else if (msgData.content) {
+                                    // Altro formato alternativo per il testo
+                                    console.log(`DIRECT - Trovato messaggio in campo 'content': "${msgData.content}"`);
+                                    
+                                    const isSentByMe = msgData.from && msgData.from.toLowerCase() === normalizedRecipient;
+                                    const timestamp = msgData.date || Date.now();
+                                    
+                                    messages.push({
+                                        decrypted: msgData.content,
+                                        isSentByMe,
+                                        timestamp,
+                                        from: msgData.from,
+                                        to: msgData.to,
+                                        isUnencrypted: true
+                                    });
+                                }
+                                
+                                resolve();
+                            });
+                        });
+                    }
+                    
+                    // Ora visualizza i messaggi trovati
+                    if (messages.length > 0) {
+                        console.log(`DIRECT - Trovati ${messages.length} messaggi`);
+                        
+                        // Se in modalità silenziosa e abbiamo già messaggi visualizzati, controlla solo se ci sono nuovi
+                        if (silent && messagesContainer.children.length > 0) {
+                            // Verifica se ci sono nuovi messaggi da aggiungere
+                            const existingMsgIds = Array.from(document.querySelectorAll('.message[data-msg-id]')).map(
+                                el => el.getAttribute('data-msg-id')
+                            );
+                            
+                            // Ordina per timestamp
+                            messages.sort((a, b) => a.timestamp - b.timestamp);
+                            
+                            // Visualizza solo i nuovi messaggi
+                            let newMessagesCount = 0;
+                            messages.forEach(msg => {
+                                const messageTime = new Date(msg.timestamp);
+                                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                                const uniqueId = `direct_${msg.timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+                                
+                                // Se non è già visualizzato (approssimazione)
+                                if (!existingMsgIds.some(id => id.includes(msg.timestamp.toString()))) {
+                                    const messageElement = document.createElement('div');
+                                    messageElement.className = msg.isSentByMe ? 'message sent' : 'message received';
+                                    messageElement.setAttribute('data-msg-id', uniqueId);
+                                    messageElement.innerHTML = `
+                                        ${msg.decrypted}
+                                        <div class="meta">
+                                            ${timeString}
+                                            <span class="message-sender">${msg.isSentByMe ? 'Tu' : (msg.from ? msg.from.slice(0, 6) + '...' : 'Sconosciuto')}</span>
+                                            ${msg.isUnencrypted ? '<span style="font-size: 9px; color: #aaa;">[Testo in chiaro]</span>' : ''}
+                                        </div>
+                                    `;
+                                    
+                                    messagesContainer.appendChild(messageElement);
+                                    newMessagesCount++;
+                                }
+                            });
+                            
+                            if (newMessagesCount > 0) {
+                                console.log(`DIRECT - Aggiunti ${newMessagesCount} nuovi messaggi in modalità silenziosa`);
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            }
+                        } else if (!silent) {
+                            // In modalità normale, pulisci il container e visualizza tutti i messaggi
+                            // Ordina per timestamp
+                            messages.sort((a, b) => a.timestamp - b.timestamp);
+                            
+                            // Pulisci container
+                            messagesContainer.innerHTML = '';
+                            
+                            // Visualizza messaggi
+                            messages.forEach(msg => {
+                                const messageTime = new Date(msg.timestamp);
+                                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                                
+                                const messageElement = document.createElement('div');
+                                messageElement.className = msg.isSentByMe ? 'message sent' : 'message received';
+                                messageElement.setAttribute('data-msg-id', `direct_${msg.timestamp}_${Math.random().toString(36).substring(2, 9)}`);
+                                messageElement.innerHTML = `
+                                    ${msg.decrypted}
+                                    <div class="meta">
+                                        ${timeString}
+                                        <span class="message-sender">${msg.isSentByMe ? 'Tu' : (msg.from ? msg.from.slice(0, 6) + '...' : 'Sconosciuto')}</span>
+                                        ${msg.isUnencrypted ? '<span style="font-size: 9px; color: #aaa;">[Testo in chiaro]</span>' : ''}
+                                    </div>
+                                `;
+                                
+                                messagesContainer.appendChild(messageElement);
+                            });
+                            
+                            // Scorrimento
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                    } else if (!silent) {
+                        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Messaggi trovati nel namespace ma nessuno decifrabile</div>';
+                    }
+                });
+            } catch (error) {
+                console.error("DIRECT - Errore nel recupero diretto:", error);
+                if (!silent) {
+                    messagesContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: red;">Errore nel recupero: ${error.message}</div>`;
+                }
+            }
+        }
+        
+        // Funzione per visualizzare i messaggi in modalità emergenza (senza decrittazione)
+        async function emergencyFetchMessages(recipientAddr) {
+            console.log("=== RECUPERO EMERGENZA ===");
+            
+            if (!userAddress) {
+                console.error("Indirizzo utente non disponibile");
+                messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Errore: indirizzo utente mancante</div>';
+                return;
+            }
+            
+            // Genera il namespace della chat
+            const normalizedRecipient = userAddress.toLowerCase();
+            const normalizedSender = recipientAddr.toLowerCase();
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            console.log("EMERGENCY - Namespace:", chatNamespace);
+            console.log("EMERGENCY - Partecipanti:", participants.join(", "));
+            
+            try {
+                // Lettura diretta dal namespace
+                window.gun.get(chatNamespace).once(async (data) => {
+                    console.log("EMERGENCY - Dati namespace:", data);
+                    
+                    if (!data) {
+                        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Nessun dato trovato nel namespace</div>';
+                        return;
+                    }
+                    
+                    // Array per raccogliere i messaggi
+                    const messages = [];
+                    
+                    // Per ogni chiave nel namespace (escluse le chiavi speciali di Gun)
+                    for (const key in data) {
+                        if (key === '_' || key === '#') continue;
+                        
+                        console.log(`EMERGENCY - Trovata chiave: ${key}`);
+                        
+                        // Ottieni i dati completi per questa chiave
+                        await new Promise(resolve => {
+                            window.gun.get(chatNamespace).get(key).once((msgData) => {
+                                if (!msgData) {
+                                    console.log(`EMERGENCY - Nessun dato per la chiave ${key}`);
+                                    resolve();
+                                    return;
+                                }
+                                
+                                console.log(`EMERGENCY - Dati per chiave ${key}:`, msgData);
+                                
+                                // Estrai il testo da qualsiasi campo disponibile
+                                let messageText = null;
+                                
+                                // Controlla vari campi per testo in chiaro
+                                if (msgData.text) {
+                                    messageText = msgData.text;
+                                    console.log(`EMERGENCY - Trovato testo in campo 'text': ${messageText}`);
+                                } else if (msgData.message) {
+                                    messageText = msgData.message;
+                                    console.log(`EMERGENCY - Trovato testo in campo 'message': ${messageText}`);
+                                } else if (msgData.content) {
+                                    messageText = msgData.content;
+                                    console.log(`EMERGENCY - Trovato testo in campo 'content': ${messageText}`);
+                                } else if (msgData.plaintext && !msgData.plaintext.endsWith('...')) {
+                                    messageText = msgData.plaintext;
+                                    console.log(`EMERGENCY - Trovato testo in campo 'plaintext': ${messageText}`);
+                                } else if (msgData.encryptedMSG) {
+                                    // Mostra il valore crittografato come ultima risorsa
+                                    if (typeof msgData.encryptedMSG === 'string' && !/[^\w\s.,!?]/.test(msgData.encryptedMSG)) {
+                                        // Se sembra testo in chiaro, usalo direttamente
+                                        messageText = msgData.encryptedMSG;
+                                        console.log(`EMERGENCY - encryptedMSG sembra testo in chiaro: ${messageText}`);
+                                    } else {
+                                        // Altrimenti usa un segnaposto
+                                        messageText = `[Messaggio crittografato]`;
+                                        if (msgData.plaintext) {
+                                            messageText += ` (Inizio: ${msgData.plaintext})`;
+                                        }
+                                        console.log(`EMERGENCY - Usando segnaposto per messaggio crittografato`);
+                                    }
+                                } else {
+                                    messageText = "[Contenuto messaggio non disponibile]";
+                                    console.log(`EMERGENCY - Nessun campo utilizzabile trovato`);
+                                }
+                                
+                                const isSentByMe = msgData.from && msgData.from.toLowerCase() === normalizedRecipient;
+                                const timestamp = msgData.date || Date.now();
+                                
+                                messages.push({
+                                    text: messageText,
+                                    isSentByMe, 
+                                    timestamp,
+                                    from: msgData.from,
+                                    to: msgData.to,
+                                    rawData: msgData
+                                });
+                                
+                                resolve();
+                            });
+                        });
+                    }
+                    
+                    // Visualizza i messaggi trovati
+                    if (messages.length > 0) {
+                        console.log(`EMERGENCY - Trovati ${messages.length} messaggi`);
+                        
+                        // Ordina per timestamp
+                        messages.sort((a, b) => a.timestamp - b.timestamp);
+                        
+                        // Pulisci container
+                        messagesContainer.innerHTML = `
+                            <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 10px; border-radius: 5px; text-align: center;">
+                                <strong>MODALITÀ EMERGENZA</strong> - Visualizzazione messaggi senza decrittazione
+                            </div>
+                        `;
+                        
+                        // Visualizza messaggi
+                        messages.forEach(msg => {
+                            const messageTime = new Date(msg.timestamp);
+                            const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                            
+                            const messageElement = document.createElement('div');
+                            messageElement.className = msg.isSentByMe ? 'message sent' : 'message received';
+                            messageElement.style.backgroundColor = msg.isSentByMe ? '#f8d7da' : '#d7f8e0';
+                            messageElement.innerHTML = `
+                                ${msg.text}
+                                <div class="meta">
+                                    ${timeString}
+                                    <span class="message-sender">${msg.isSentByMe ? 'Tu' : (msg.from ? msg.from.slice(0, 6) + '...' : 'Sconosciuto')}</span>
+                                    <span style="font-size: 9px; color: #721c24;">[EMERGENZA]</span>
+                                </div>
+                            `;
+                            
+                            messagesContainer.appendChild(messageElement);
+                        });
+                        
+                        // Scorrimento
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    } else {
+                        messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Nessun messaggio trovato</div>';
+                    }
+                });
+            } catch (error) {
+                console.error("EMERGENCY - Errore nel recupero:", error);
+                messagesContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: red;">Errore nel recupero: ${error.message}</div>`;
+            }
+        }
+
+        // Mostra la chat attiva e prepara l'interfaccia
+        function showActiveChat(recipientAddress) {
+            if (!recipientAddress) return;
+            
+            // Normalizza l'input
+            const recipientAddr = recipientAddress.trim();
+            if (!recipientAddr.startsWith('0x')) {
+                console.warn("Indirizzo destinatario non valido:", recipientAddr);
+                alert("Inserisci un indirizzo Ethereum valido che inizi con 0x");
+                return;
+            }
+            
+            console.log(`Preparazione interfaccia per chat con ${recipientAddr}`);
+            
+            // Pulisci l'interfaccia
+            messagesContainer.innerHTML = '<div class="loading-message">Caricamento conversazione...</div>';
+            
+            // Imposta il titolo della chat
+            if (document.getElementById('chat-title')) {
+                document.getElementById('chat-title').textContent = `Chat con ${recipientAddr.slice(0, 6)}...${recipientAddr.slice(-4)}`;
+            } else {
+                console.warn("Elemento 'chat-title' non trovato nell'HTML");
+            }
+            
+            // Salva l'indirizzo del destinatario attuale
+            currentRecipient = recipientAddr;
+        }
+
+        // Funzione per connettersi a una chat con un destinatario
+        async function connectChat() {
+            const recipientAddr = recipientInput.value.trim();
+            
+            if (!recipientAddr) {
+                alert('Inserisci un indirizzo del destinatario');
+                return;
+            }
+            
+            if (!recipientAddr.startsWith('0x')) {
+                alert('L\'indirizzo deve iniziare con 0x (formato Ethereum)');
+                return;
+            }
+            
+            console.log(`Connessione alla chat con ${recipientAddr}...`);
+            
+            if (!window.gunKeyPair) {
+                console.warn("Nessun keypair disponibile. Verrà generato automaticamente.");
+                await generateKeyPair();
+            }
+            
+            // Salva questo destinatario nell'elenco delle conversazioni attive
+            activeConversations.add(recipientAddr);
+            updateActiveConversationsList();
+            
+            // Avvia l'ascolto della conversazione
+            await startListeningToConversation(recipientAddr);
+        }
+
+        // Funzione per inviare un messaggio
+        async function sendMessage() {
+            // Ottieni il messaggio dall'input
+            const messageText = messageInput.value.trim();
+            
+            // Verifica che ci sia un messaggio
+            if (!messageText) {
+                console.warn("Nessun testo del messaggio inserito");
+                return;
+            }
+            
+            // Verifica che ci sia un destinatario
+            const recipientAddr = currentRecipient || recipientInput.value.trim();
+            if (!recipientAddr) {
+                alert('Inserisci un indirizzo del destinatario');
+                return;
+            }
+            
+            // Verifica che ci sia un keypair
+            if (!window.gunKeyPair) {
+                console.warn("Nessun keypair disponibile. Verrà generato automaticamente.");
+                await generateKeyPair();
+            }
+            
+            console.log(`Invio messaggio a ${recipientAddr}: ${messageText.substring(0, 30)}...`);
+            
+            // Mostra un messaggio di caricamento
+            const loadingMsgId = `loading_${Date.now()}`;
+            const loadingElement = document.createElement('div');
+            loadingElement.className = 'message sent loading';
+            loadingElement.setAttribute('data-msg-id', loadingMsgId);
+            loadingElement.innerHTML = `
+                ${messageText}
+                <div class="meta">
+                    Invio in corso...
+                    <span class="message-sender">Tu</span>
+                </div>
+            `;
+            messagesContainer.appendChild(loadingElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Calcola il namespace
+            const normalizedSender = userAddress.toLowerCase();
+            const normalizedRecipient = recipientAddr.toLowerCase();
+            const participants = [normalizedSender, normalizedRecipient].sort();
+            const sortedParticipants = participants.join("");
+            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            
+            console.log("Invio nel namespace:", chatNamespace);
+            console.log("Partecipanti (ordinati):", participants.join(", "));
+            
+            try {
+                // Verifica che il keypair del destinatario sia valido
+                const recipientKeypair = await window.succus.getKeypairFromAddress(recipientAddr);
+                if (!recipientKeypair || !recipientKeypair.epub) {
+                    console.error("Keypair del destinatario non trovata, creazione automatica");
+                    await window.succus.storeKeyPair(recipientAddr);
+                }
+                
+                // Invio del messaggio
+                window.succus.sendMessage({
+                    keypair: window.gunKeyPair,
+                    message: messageText,
+                    recipient: recipientAddr,
+                    namespace: chatNamespace,
+                    onSuccess: (msgData) => {
+                        console.log("Messaggio inviato con successo:", msgData);
+                        
+                        // Rimuovi il messaggio di caricamento
+                        const loadingMsg = document.querySelector(`[data-msg-id="${loadingMsgId}"]`);
+                        if (loadingMsg) {
+                            loadingMsg.remove();
+                        }
+                        
+                        // Pulisci l'input
+                        messageInput.value = '';
+                        
+                        // Recupera tutti i messaggi dopo l'invio per assicurarsi che vengano visualizzati
+                        setTimeout(() => {
+                            directFetchMessages(recipientAddr, true);
+                        }, 1000);
+                    },
+                    onError: (error) => {
+                        console.error("Errore nell'invio del messaggio:", error);
+                        
+                        // Rimuovi il messaggio di caricamento
+                        const loadingMsg = document.querySelector(`[data-msg-id="${loadingMsgId}"]`);
+                        if (loadingMsg) {
+                            loadingMsg.remove();
+                        }
+                        
+                        // Mostra l'errore nell'interfaccia
+                        const errorElement = document.createElement('div');
+                        errorElement.className = 'message sent error';
+                        errorElement.innerHTML = `
+                            ${messageText}
+                            <div class="meta">
+                                Errore: ${error.message || 'Invio fallito'}
+                                <span class="message-sender">Tu</span>
+                            </div>
+                        `;
+                        messagesContainer.appendChild(errorElement);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                });
+            } catch (error) {
+                console.error("Errore durante l'invio del messaggio:", error);
+                
+                // Rimuovi il messaggio di caricamento
+                const loadingMsg = document.querySelector(`[data-msg-id="${loadingMsgId}"]`);
+                if (loadingMsg) {
+                    loadingMsg.remove();
+                }
+                
+                // Mostra l'errore nell'interfaccia
+                const errorElement = document.createElement('div');
+                errorElement.className = 'message sent error';
+                errorElement.innerHTML = `
+                    ${messageText}
+                    <div class="meta">
+                        Errore: ${error.message || 'Invio fallito'}
+                        <span class="message-sender">Tu</span>
+                    </div>
+                `;
+                messagesContainer.appendChild(errorElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html> 

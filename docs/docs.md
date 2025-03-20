@@ -4,6 +4,9 @@
 <dt><a href="#dbConf">dbConf(conf)</a></dt>
 <dd><p>This function is used to configure gunDB as succus is built on top of it. Learn more at <a href="https://gun.eco">https://gun.eco</a> and follow @marknadal on twitter! It&#39;s a really awesome project and if you learn use it, you can easily make succus your own.</p>
 </dd>
+<dt><a href="#encryptMessage">encryptMessage(msg, secret)</a> ⇒</dt>
+<dd><p>Encrypts a message using a shared secret</p>
+</dd>
 <dt><a href="#getKeypair">getKeypair(address)</a> ⇒ <code>Promise.&lt;pubPair&gt;</code></dt>
 <dd><p>This function fetches the public keypair used to encrypt a message.</p>
 </dd>
@@ -28,6 +31,19 @@ This function is used to configure gunDB as succus is built on top of it. Learn 
 | Param | Description |
 | --- | --- |
 | conf | Change the configuration of the DB by passing an object to this function containing your config: https://gun.eco/docs/API#options |
+
+<a name="encryptMessage"></a>
+
+## encryptMessage(msg, secret) ⇒
+Encrypts a message using a shared secret
+
+**Kind**: global function  
+**Returns**: The encrypted message  
+
+| Param | Description |
+| --- | --- |
+| msg | The message to encrypt |
+| secret | The shared secret generated with SEA.secret() |
 
 <a name="getKeypair"></a>
 
@@ -78,6 +94,5 @@ This function is used by succus to connect to the user wallet.
 **Returns**: <code>Promise.&lt;WalletInfo&gt;</code> - An object which contains: the address of the account, the reference to the wallet and the reference to the provider.  
 **Example**  
 ```js
-const {address, wallet, provider, gunKeypair} = connectWallet();
-console.log(address) // 0x...
+const {address, wallet, provider, gunKeypair} = connectWallet();console.log(address) // 0x...
 ```
