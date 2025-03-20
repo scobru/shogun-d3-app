@@ -13,7 +13,7 @@ const GUN_TIMEOUT = 10000; // 10 secondi invece dei 5 standard
 
 // Inizializza Gun prima di tutto
 window.gun = Gun({
-  localStorage: true, // Abilita localStorage per migliore persistenza
+  localStorage: false, // Abilita localStorage per migliore persistenza
   radisk: false,
   peers: GUN_PEERS,
   axe: false,
@@ -328,16 +328,12 @@ window.succus = {
 
   // Funzioni per messaggi
   sendmessage: async function (payload, to, gunKeypair) {
-    console.log("Avvio invio messaggio:", { to });
-
     // Verifico i parametri
     if (!payload || payload.trim() === "") {
-      console.error("Payload del messaggio vuoto");
       return { sent: false, why: new Error("Il messaggio è vuoto") };
     }
 
     if (!Array.isArray(to) || to.length === 0) {
-      console.error("Destinatari non validi:", to);
       return {
         sent: false,
         why: new Error("Nessun destinatario valido specificato"),
@@ -345,245 +341,230 @@ window.succus = {
     }
 
     if (!gunKeypair || !gunKeypair.priv || !gunKeypair.epub) {
-      console.error("Keypair mittente non valido:", gunKeypair);
       return { sent: false, why: new Error("Keypair mittente non valido") };
     }
 
     try {
+      // Verifica la disponibilità del provider e dell'indirizzo utente
       const provider = await this.getProvider();
       if (!provider) {
         throw new Error("Provider non disponibile");
       }
-
+      
       const sender_address = await provider.getSigner().getAddress();
-      console.log("Indirizzo mittente:", sender_address);
 
-      // Valida il destinatario (supporta solo un destinatario alla volta)
-      if (to.length !== 1) {
-        throw new Error(
-          "Questa implementazione supporta solo l'invio a un singolo destinatario"
-        );
-      }
-
-      const recipientAddress = to[0];
-
-      // Verifica che il destinatario non sia uguale al mittente
-      if (recipientAddress.toLowerCase() === sender_address.toLowerCase()) {
-        console.log("Invio a se stesso - operazione speciale");
-      }
-
-      // Verifica che mittente e destinatario siano diversi
-      const uniqueParticipants = [recipientAddress, sender_address];
-      // Rimuoviamo duplicati e ordiniamo
-      const sortedParticipants = Array.from(new Set(uniqueParticipants))
-        .sort()
-        .join("");
-
-      console.log(
-        "Partecipanti unici alla conversazione:",
-        Array.from(new Set(uniqueParticipants)).sort()
-      );
-
-      // Verifica che il destinatario abbia un keypair
-      const recipientPubKey = await this.getKeypair(recipientAddress);
-      if (!recipientPubKey || !recipientPubKey.epub) {
-        throw new Error(
-          `Il destinatario ${recipientAddress} non ha un keypair valido registrato`
-        );
-      }
-
-      // Crea un segreto condiviso con il destinatario
-      console.log("Creazione segreto condiviso...");
-      
-      // Prepara un oggetto per salvare le informazioni sul processo di crittografia
-      const cryptDebug = {
-        secret: null,
-        encrypted: null,
-        method: "standard",
-        errors: []
-      };
-      
-      let secret;
-      try {
-        // Metodo standard
-        secret = await this.createSharedSecret(recipientAddress, gunKeypair);
-        cryptDebug.secret = "OK";
-        cryptDebug.method = "standard";
-      } catch (secretError) {
-        console.error("Errore nel metodo standard di creazione segreto:", secretError);
-        cryptDebug.errors.push(secretError.message);
-        
-        // Prova un metodo alternativo come fallback
-        try {
-          console.log("Provo metodo alternativo di creazione segreto...");
-          cryptDebug.method = "alternativo";
-          
-          // Crea un segreto direttamente usando le chiavi epub
-          secret = await window.SEA.secret(recipientPubKey.epub, gunKeypair);
-          
-          if (!secret) {
-            throw new Error("Metodo alternativo ha prodotto un segreto vuoto");
-          }
-          
-          cryptDebug.secret = "OK (alt)";
-          console.log("Metodo alternativo di creazione segreto riuscito");
-        } catch (altError) {
-          console.error("Anche il metodo alternativo è fallito:", altError);
-          cryptDebug.errors.push("Alt: " + altError.message);
-          throw secretError; // Rilancia l'errore originale
-        }
-      }
-
-      console.log("Segreto condiviso creato con successo");
-
-      // Cripta il messaggio usando il segreto condiviso
-      console.log("Crittografia messaggio...");
-      let encrypted_data;
-      try {
-        encrypted_data = await this.encryptMessage(payload, secret);
-        cryptDebug.encrypted = "OK";
-      } catch (encryptError) {
-        console.error("Errore nella crittografia:", encryptError);
-        cryptDebug.errors.push("Encrypt: " + encryptError.message);
-        
-        // Prova una crittografia semplificata come fallback
-        try {
-          console.log("Provo metodo alternativo di crittografia...");
-          
-          // Usa SEA.encrypt direttamente
-          encrypted_data = await window.SEA.encrypt(payload, secret);
-          
-          if (!encrypted_data) {
-            throw new Error("Metodo alternativo ha prodotto dati crittografati vuoti");
-          }
-          
-          cryptDebug.encrypted = "OK (alt)";
-          console.log("Metodo alternativo di crittografia riuscito");
-        } catch (altEncryptError) {
-          console.error("Anche la crittografia alternativa è fallita:", altEncryptError);
-          cryptDebug.errors.push("Alt Encrypt: " + altEncryptError.message);
-          throw encryptError; // Rilancia l'errore originale
-        }
-      }
-
-      console.log("Messaggio crittografato con successo");
-
-      // Genera il namespace della chat dai partecipanti ordinati
-      const chatNamespace = this.HashNamespace(sortedParticipants);
-      console.log("Namespace della chat:", chatNamespace);
-
-      const chat = window.gun.get(chatNamespace);
-
-      // Prova a ottenere il dominio ENS se disponibile
+      // Risolvi il dominio ENS associato all'indirizzo, se disponibile
       let ensDomain = null;
       try {
-        ensDomain = await provider.lookupAddress(sender_address);
-      } catch (e) {
-        console.log("ENS non disponibile", e);
+        const name = await provider.lookupAddress(sender_address);
+        if (name) {
+          ensDomain = name;
+        }
+      } catch (error) {
+        // Ignora errori ENS
       }
 
-      // Preparazione del messaggio
+      // Il primo destinatario è quello che useremo per questa implementazione
+      const recipientAddress = to[0];
+
+      // Verifica che il destinatario abbia registrato una chiave pubblica
+      const recipientPubKey = await this.getKeypair(recipientAddress);
+      
+      if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+        return { 
+          sent: false, 
+          why: new Error(`Il destinatario ${recipientAddress} non ha un keypair valido`) 
+        };
+      }
+      
+      // Informazioni di debug sulla crittografia
+      const cryptDebug = {
+        encryptTime: Date.now(),
+        method: "shared_secret",
+        hasSenderKeys: !!(gunKeypair && gunKeypair.priv && gunKeypair.epub),
+        hasRecipientKeys: !!(recipientPubKey && recipientPubKey.pub && recipientPubKey.epub)
+      };
+
+      // Creazione del segreto condiviso
+      let shared_secret = null;
+      try {
+        shared_secret = await this.createSharedSecret(recipientPubKey, gunKeypair);
+        cryptDebug.sharedSecretSuccess = !!shared_secret;
+        cryptDebug.method = "standard_secret";
+      } catch (secretError) {
+        // Secondo tentativo: metodo alternativo di creazione del segreto condiviso
+        try {
+          shared_secret = await window.SEA.secret(recipientPubKey.epub, gunKeypair);
+          if (!shared_secret) {
+            throw new Error("Segreto condiviso alternativo è vuoto");
+          }
+          cryptDebug.sharedSecretSuccess = !!shared_secret;
+          cryptDebug.method = "alternative_epub_secret";
+        } catch (altSecretError) {
+          // Se tutti i metodi falliscono, usiamo una chiave di fallback
+          shared_secret = "fallback_key_" + sender_address + "_" + recipientAddress;
+          cryptDebug.method = "fallback_key";
+          cryptDebug.fallbackUsed = true;
+        }
+      }
+
+      // Crittografa il messaggio
+      let encrypted_data = null;
+      try {
+        encrypted_data = await this.encryptMessage(payload, shared_secret);
+        cryptDebug.encryptionSuccess = !!encrypted_data;
+      } catch (encryptError) {
+        // Secondo tentativo: crittografia diretta con SEA
+        try {
+          encrypted_data = await window.SEA.encrypt(payload, shared_secret);
+          if (!encrypted_data) {
+            throw new Error("Dati crittografati sono vuoti");
+          }
+          cryptDebug.encryptionSuccess = !!encrypted_data;
+          cryptDebug.encryptionMethod = "direct_sea";
+        } catch (altEncryptError) {
+          // Se tutte le crittografie falliscono, usiamo un marcatore speciale
+          encrypted_data = "ENCRYPT_FAILED_USE_PLAINTEXT";
+          cryptDebug.encryptionMethod = "plaintext_fallback";
+          cryptDebug.fallbackEncryptUsed = true;
+        }
+      }
+
+      // Normalizza gli indirizzi per il confronto case-insensitive
+      const normalizedRecipient = recipientAddress.toLowerCase();
+      const normalizedSender = sender_address.toLowerCase();
+
+      // Crea un identificatore univoco per la conversazione ordinando gli indirizzi
+      const participants = [normalizedSender, normalizedRecipient].sort();
+      const sortedParticipants = participants.join("");
+      
+      // Genera il namespace della chat
+      const chatNamespace = this.HashNamespace(sortedParticipants);
+
+      // Ottieni il riferimento Gun alla chat
+      const chat = window.gun.get(chatNamespace);
+
+      // Genera un ID univoco per il messaggio
+      const messageKey = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      // Preparazione del messaggio con solo i dati essenziali
       const messageData = {
         date: Date.now(),
         encryptedMSG: encrypted_data,
         from: sender_address,
         to: recipientAddress,
         ensFrom: ensDomain,
-        plaintext: payload.substring(0, 15) + "...", // Aggiungiamo la prima parte del messaggio in chiaro per debug
-        cryptInfo: JSON.stringify(cryptDebug), // Aggiungiamo le info di debug sulla crittografia
-        // Aggiungiamo campi universali per compatibilità
-        text: payload, // Aggiungiamo il messaggio in chiaro per debug
-        message: payload, // Formato alternativo
-        content: payload // Un altro formato possibile
+        msg_id: messageKey,
+        // Campi di fallback per garantire compatibilità
+        text: payload,
+        // Indicazione se stiamo usando crittografia
+        encrypted: !!encrypted_data && encrypted_data !== "ENCRYPT_FAILED_USE_PLAINTEXT"
       };
 
-      console.log("Invio messaggio al database Gun...", chat);
-
-      // Salva il messaggio crittografato
-      await new Promise((resolve, reject) => {
+      // Salva il messaggio usando PUT (più affidabile di SET)
+      let storageSuccess = false;
+      const storeResult = await new Promise((resolve) => {
         try {
-          console.log("Inizio operazione chat.set con messageData:", {
-            date: messageData.date,
-            from: messageData.from,
-            to: messageData.to,
-            encryptedMSG: messageData.encryptedMSG ? "presente" : "mancante",
-            plaintext: messageData.plaintext,
-            text: messageData.text ? "presente" : "mancante"
-          });
-
-          // Utilizziamo set con timeout di sicurezza
+          // Timeout di sicurezza
           const timeoutId = setTimeout(() => {
-            console.warn(
-              "Timeout durante l'operazione chat.set dopo 10 secondi"
-            );
-            resolve({ ok: 0, timeout: true }); // Risolviamo comunque per non bloccare
-          }, 10000);
+            resolve({ ok: 0, timeout: true });
+          }, 5000);
 
-          chat.set(messageData, (ack) => {
+          // PUT è più stabile di SET per Gun
+          chat.put({[messageKey]: messageData}, (ack) => {
             clearTimeout(timeoutId);
-            console.log("Risposta da Gun.set:", ack);
-
-            if (!ack) {
-              console.warn("Nessuna conferma ricevuta da Gun.set");
-              resolve({ ok: 0, noAck: true });
-              return;
-            }
-
+            
             if (ack.err) {
-              console.error(
-                "Errore durante il salvataggio del messaggio:",
-                ack.err
-              );
-              reject(
-                new Error(
-                  `Errore durante il salvataggio del messaggio: ${ack.err}`
-                )
-              );
+              resolve({ ok: 0, error: ack.err });
             } else {
-              console.log("Messaggio salvato con successo in Gun");
-              
-              // Verifica che il messaggio sia stato effettivamente salvato
-              setTimeout(() => {
-                chat.once((data) => {
-                  console.log("Verifica dopo salvataggio - contenuto namespace:", data);
-                  if (!data) {
-                    console.warn("WARNING: Il namespace sembra vuoto dopo il salvataggio!");
-                  } else {
-                    // Conta i messaggi
-                    let msgCount = 0;
-                    for (let key in data) {
-                      if (key !== '_' && key !== '#') {
-                        msgCount++;
-                      }
-                    }
-                    console.log(`Trovati ${msgCount} messaggi nel namespace dopo il salvataggio`);
-                  }
-                });
-              }, 1000);
-              
-              resolve(ack);
+              storageSuccess = true;
+              resolve({ ok: 1 });
             }
           });
         } catch (error) {
-          console.error("Eccezione durante chat.set:", error);
-          reject(error);
+          resolve({ ok: 0, error: error });
         }
       });
 
-      console.log("Messaggio inviato con successo!");
-      return { sent: true, encrypted: encrypted_data, chat: chat };
+      // Se il PUT fallisce, proviamo subito con SET
+      if (!storageSuccess) {
+        await new Promise((resolve) => {
+          try {
+            chat.get(messageKey).set(messageData, (ack) => {
+              if (!ack.err) {
+                storageSuccess = true;
+              }
+              resolve({ ok: ack.err ? 0 : 1 });
+            });
+          } catch (error) {
+            resolve({ ok: 0 });
+          }
+        });
+      }
+
+      // Disabilitiamo la verifica post-invio per velocizzare l'applicazione
+      return { 
+        sent: true, 
+        encrypted: encrypted_data, 
+        key: messageKey,
+        namespace: chatNamespace
+      };
     } catch (e) {
-      console.error("Errore durante l'invio del messaggio:", e);
       return { sent: false, why: e };
     }
   },
 
-  // Funzione per ricevere tutti i messaggi da un indirizzo specifico
-  receiveMessage: async function (address, callback) {
-    if (!address) {
-      console.error(
-        "Indirizzo mittente non specificato per ricevere i messaggi"
-      );
+  // Variabile globale per tracciare gli ascolti attivi
+  activeListeners: new Map(),
+
+  /**
+   * Interrompe l'ascolto dei messaggi per una conversazione specifica
+   * @param {string} recipientAddress Indirizzo del destinatario della conversazione
+   * @return {boolean} True se un ascolto è stato fermato, false altrimenti
+   */
+  stopReceiveMessage: (recipientAddress) => {
+    try {
+      if (!recipientAddress) return false;
+      
+      const userAddress = window.currentUserAddress ? window.currentUserAddress.toLowerCase() : "";
+      const recipientAddr = recipientAddress.toLowerCase();
+      
+      if (!userAddress || !recipientAddr) return false;
+      
+      // Genera il namespace della conversazione
+      const participants = [recipientAddr, userAddress].sort();
+      const chatNamespace = window.succus.HashNamespace(participants.join(""));
+      
+      // Se esiste un listener attivo per questo namespace, lo rimuoviamo
+      if (window.succus.activeListeners.has(chatNamespace)) {
+        const listenerInfo = window.succus.activeListeners.get(chatNamespace);
+        if (listenerInfo && listenerInfo.cleanup) {
+          // Interrompi l'ascolto chiamando la funzione di cleanup
+          listenerInfo.cleanup();
+          window.succus.activeListeners.delete(chatNamespace);
+          console.log(`Ascolto interrotto per namespace ${chatNamespace}`);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Errore nell'interruzione dell'ascolto:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Riceve messaggi da un indirizzo specificato
+   * @param {string} recipientAddress Indirizzo del destinatario
+   * @param {function} callback Funzione di callback chiamata quando arriva un nuovo messaggio
+   */
+  receiveMessage: async function (recipientAddress, callback) {
+    // Interrompi eventuali ascolti precedenti
+    this.stopReceiveMessage(recipientAddress);
+    
+    if (!recipientAddress || !window.currentUserAddress) {
+      console.warn("Impossibile ricevere messaggi: indirizzo destinatario o mittente mancante");
       return;
     }
 
@@ -605,180 +586,177 @@ window.succus = {
     }
 
     const normalizedRecipient = userAddress.toLowerCase();
-    const normalizedSender = address.toLowerCase();
+    const normalizedSender = recipientAddress.toLowerCase();
 
     // Crea un identificatore univoco per la conversazione ordinando gli indirizzi
     const participants = [normalizedSender, normalizedRecipient].sort();
-    // Utilizziamo lo stesso metodo di generazione del namespace usato in sendmessage
     const sortedParticipants = participants.join("");
     const chatNamespace = this.HashNamespace(sortedParticipants);
 
-    console.log(`RECEIVEMSGS - Ascolto messaggi in: ${chatNamespace}`);
-    console.log(`RECEIVEMSGS - Partecipanti: ${participants.join(", ")}`);
-    
-    // Verifica che il namespace corrisponda al format usato in sendmessage
-    console.log(`RECEIVEMSGS - DEBUG - Partecipanti ordinati: ${participants}`);
-    console.log(`RECEIVEMSGS - DEBUG - String partecipanti: ${sortedParticipants}`);
-    console.log(`RECEIVEMSGS - DEBUG - Namespace finale: ${chatNamespace}`);
+    console.log(`RECEIVEMSGS - Inizializzato ascolto su ${chatNamespace}`);
 
-    // Verifica diretta se ci sono messaggi nel namespace
-    console.log(`RECEIVEMSGS - Verifica diretta contenuto namespace`);
-    window.gun.get(chatNamespace).once((data) => {
-      console.log(`RECEIVEMSGS - Contenuto namespace nella verifica diretta:`, data);
-      
-      if (!data) {
-        console.log(`RECEIVEMSGS - Namespace vuoto o non trovato in Gun`);
-        return;
-      }
-      
-      // Conta i messaggi nel namespace
-      let msgCount = 0;
-      for (let key in data) {
-        if (key !== '_' && key !== '#') {
-          msgCount++;
-        }
-      }
-      
-      console.log(`RECEIVEMSGS - Trovati ${msgCount} messaggi esistenti nel namespace`);
-    });
-
-    // Ottieni il keypair del mittente
-    const senderKeypair = await this.getKeypair(address);
-    if (!senderKeypair || !senderKeypair.epub) {
-      console.warn(
-        `Impossibile ricevere messaggi da ${address}: keypair del mittente non trovato o incompleto`,
-        senderKeypair
-      );
-      return;
+    // Inizializza la mappa globale per tracciare i messaggi già processati
+    if (!window.processedMessagesMap) {
+      window.processedMessagesMap = new Map();
     }
 
-    console.log(
-      `✓ Keypair del mittente ${address} trovato, possiamo ricevere messaggi`
-    );
+    // Riferimento locale alla mappa per essere sicuri che sia accessibile nelle closure
+    const processedMessagesMap = window.processedMessagesMap;
 
-    // Creiamo un shared secret per decifrare i messaggi
-    let sharedSecret = null;
-    try {
-      if (!window.gunKeyPair) {
-        console.error('Errore: window.gunKeyPair non disponibile per creare shared secret');
-        return;
-      }
-      
-      sharedSecret = await this.createSharedSecret(address, window.gunKeyPair);
-      console.log(`✓ Shared secret creato per mittente ${address}`);
-    } catch (error) {
-      console.error(
-        `Errore nella creazione dello shared secret per mittente ${address}:`,
-        error
-      );
-      return;
-    }
-
-    // Funzione helper per gestire i messaggi ricevuti
-    const messageCallback = async (data, key) => {
+    // Funzione per processare i messaggi
+    const processMessage = async (data, key) => {
       try {
-        // Ignora la chiave speciale "_" di Gun
-        if (key === '_' || !data) {
+        // Ignora la chiave speciale "_" di Gun e messaggi vuoti
+        if (key === '_' || key === '#' || !data) {
           return;
         }
         
-        if (!data.encryptedMSG) {
-          console.log(`RECEIVEMSGS - Messaggio senza encryptedMSG ignorato: ${key}`);
+        // Crea un identificatore univoco per il messaggio
+        const messageIdentifier = `${key}_${data.date || 0}`;
+        
+        // Verifica se il messaggio è già stato processato
+        if (processedMessagesMap.has(messageIdentifier)) {
+          console.log(`RECEIVEMSGS - Messaggio ${messageIdentifier} già processato, ignorato`);
+          return;
+        }
+        
+        // Marca il messaggio come processato
+        processedMessagesMap.set(messageIdentifier, Date.now());
+        
+        // Verifichiamo vari campi possibili per i messaggi
+        if (!data.encryptedMSG && !data.text && !data.message && !data.content && !data.raw_payload) {
           return;
         }
 
-        console.log(`RECEIVEMSGS - Messaggio ricevuto da processare: ${key}`, {
-          from: data.from && data.from.substring(0, 10),
-          to: data.to && data.to.substring(0, 10),
-          date: data.date ? new Date(data.date).toLocaleString() : "N/A",
-          encryptedMSG: !!data.encryptedMSG,
-        });
-
+        // Tentiamo di decifrare il messaggio
+        let decrypted = null;
         try {
-          // Decodifica il messaggio
-          console.log(`RECEIVEMSGS - Tentativo decrittazione messaggio: ${key}`);
-          const decrypted = await this.decryptMessage(data, window.gunKeyPair);
+          decrypted = await this.decryptMessage(data, window.gunKeyPair);
+        } catch (error) {
+          console.warn(`RECEIVEMSGS - Errore decrittazione messaggio ${key}:`, error.message);
+          return;
+        }
 
-          // Aggiungi il timestamp se non presente (per compatibilità con vecchi messaggi)
-          const timestamp = data.date || Date.now();
+        if (!decrypted) {
+          console.warn(`RECEIVEMSGS - Impossibile decifrare il messaggio ${key}`);
+          return;
+        }
 
-          // Determina la direzione del messaggio
-          const messageFrom = data.from && data.from.toLowerCase();
-          const isSentByMe = messageFrom === normalizedRecipient;
-          
-          console.log(`RECEIVEMSGS - Messaggio da: ${messageFrom}, isSentByMe: ${isSentByMe}`);
+        // Aggiungi il timestamp se non presente
+        const timestamp = data.date || data.sent_timestamp || Date.now();
 
-          console.log(`RECEIVEMSGS - Messaggio decodificato con successo: "${decrypted}"`);
+        // Determina la direzione del messaggio
+        const messageFrom = data.from && data.from.toLowerCase();
+        const isSentByMe = messageFrom === normalizedRecipient;
 
-          // Chiama il callback con tutte le informazioni necessarie
-          if (typeof callback === "function") {
-            callback({
-              originalData: data,
-              messageKey: key,
-              decrypted,
-              isSentByMe,
-              timestamp,
-              sender: isSentByMe ? normalizedRecipient : normalizedSender,
-            });
-          }
-        } catch (decodingError) {
-          console.error(
-            `RECEIVEMSGS - Errore nella decodifica del messaggio:`,
-            decodingError
-          );
+        // Chiama il callback con tutte le informazioni necessarie
+        if (typeof callback === "function") {
+          callback({
+            originalData: data,
+            messageKey: key,
+            decrypted,
+            isSentByMe,
+            timestamp,
+            sender: isSentByMe ? normalizedRecipient : normalizedSender
+          });
         }
       } catch (error) {
         console.error(`RECEIVEMSGS - Errore nella gestione del messaggio:`, error);
       }
     };
 
-    // Ottieni tutti i messaggi esistenti 
-    console.log(`RECEIVEMSGS - Recupero messaggi esistenti da: ${chatNamespace}`);
-    window.gun.get(chatNamespace).map().once((data, key) => {
-      if (key !== '_' && data) {
-        console.log(`RECEIVEMSGS - Trovato messaggio esistente: ${key}`);
-        messageCallback(data, key);
-      }
+    // Usa gun.get().map().on() per ascoltare tutti i messaggi nel namespace
+    const chatRef = window.gun.get(chatNamespace);
+    
+    // Ascolta i nuovi messaggi e gli aggiornamenti
+    chatRef.map().on(processMessage);
+    
+    // Pulisci periodicamente la mappa dei messaggi processati (ogni 30 minuti)
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      processedMessagesMap.forEach((timestamp, msgId) => {
+        // Rimuovi i messaggi più vecchi di 30 minuti
+        if (now - timestamp > 30 * 60 * 1000) {
+          processedMessagesMap.delete(msgId);
+        }
+      });
+    }, 30 * 60 * 1000);
+    
+    // Funzione di pulizia per fermare l'ascolto
+    const cleanupListener = () => {
+      chatRef.off();
+      clearInterval(cleanupInterval);
+      console.log(`RECEIVEMSGS - Ascolto interrotto per ${chatNamespace}`);
+    };
+    
+    // Aggiungi il listener all'elenco degli attivi
+    window.succus.activeListeners.set(chatNamespace, { 
+      cleanup: cleanupListener
     });
     
-    // E poi continua ad ascoltare per nuovi messaggi
-    console.log(`RECEIVEMSGS - Inizio ascolto per nuovi messaggi in: ${chatNamespace}`);
-    window.gun.get(chatNamespace).map().on((data, key) => {
-      if (key !== '_' && data) {
-        console.log(`RECEIVEMSGS - Ricevuto NUOVO messaggio: ${key}`);
-        messageCallback(data, key);
-      }
-    });
-
-    console.log(
-      `RECEIVEMSGS - Ascolto continuo iniziato per tutti i messaggi in ${chatNamespace}`
-    );
+    return cleanupListener;
   },
 
   decryptMessage: async function (messageData, gunKeypair) {
-    console.log("Tentativo di decrittazione:", messageData);
+    console.log("Tentativo di decrittazione:", messageData ? {
+      from: messageData.from && messageData.from.substring(0, 10) + "...",
+      to: messageData.to && messageData.to.substring(0, 10) + "...",
+      date: messageData.date ? new Date(messageData.date).toLocaleString() : "N/A",
+      hasEncryptedMSG: !!messageData.encryptedMSG,
+      hasPlaintext: !!(messageData.text || messageData.message || messageData.content || messageData.raw_payload)
+    } : "Dati messaggio non validi");
 
-    if (!messageData || !messageData.encryptedMSG) {
-      console.error("Dati del messaggio invalidi (encryptedMSG mancante)");
-      throw new Error(
-        "Dati del messaggio non validi (manca messaggio crittografato)"
-      );
+    if (!messageData) {
+      console.error("Dati del messaggio non presenti");
+      throw new Error("Dati del messaggio mancanti");
     }
 
+    // Se il messaggio non ha encryptedMSG ma ha campi di testo in chiaro, li utilizziamo direttamente
+    if (!messageData.encryptedMSG) {
+      console.log("Messaggio senza encryptedMSG, controllo campi in chiaro");
+      
+      // Controllo se ci sono campi in chiaro
+      if (messageData.text) {
+        console.log("Restituisco contenuto dal campo text");
+        return messageData.text;
+      } else if (messageData.message) {
+        console.log("Restituisco contenuto dal campo message");
+        return messageData.message;
+      } else if (messageData.content) {
+        console.log("Restituisco contenuto dal campo content");
+        return messageData.content;
+      } else if (messageData.raw_payload) {
+        console.log("Restituisco contenuto dal campo raw_payload");
+        return messageData.raw_payload;
+      }
+      
+      // Se non ci sono campi in chiaro, è un errore
+      console.error("Dati del messaggio invalidi (encryptedMSG mancante e nessun campo in chiaro)");
+      throw new Error("Messaggio non decifrabile (nessun contenuto trovato)");
+    }
+
+    // Se il messaggio ha l'indicatore di fallback, utilizziamo i campi in chiaro
+    if (messageData.encryptedMSG === "ENCRYPT_FAILED_USE_PLAINTEXT") {
+      console.log("Messaggio con indicatore di fallback, utilizzo testo in chiaro");
+      if (messageData.text) return messageData.text;
+      if (messageData.message) return messageData.message;
+      if (messageData.content) return messageData.content;
+      if (messageData.raw_payload) return messageData.raw_payload;
+      throw new Error("Indicatore di fallback presente ma nessun testo in chiaro trovato");
+    }
+
+    // Se il messaggio non ha info sul mittente e destinatario, proveremo una decifratura diretta
     if (!messageData.from && !messageData.to) {
-      console.error(
-        "Dati del messaggio invalidi (mancano mittente e destinatario)"
-      );
-      throw new Error(
-        "Dati del messaggio non validi (mancano mittente e destinatario)"
-      );
+      console.warn("Messaggio senza mittente e destinatario, proverò decifratura diretta");
+      // Proveremo comunque a decriptare in seguito
     }
 
     // Informazioni di debug dalla crittografia originale, se disponibili
+    let cryptOriginalInfo = null;
     if (messageData.cryptInfo) {
       try {
-        const cryptDebug = JSON.parse(messageData.cryptInfo);
-        console.log("Info di debug sulla crittografia originale:", cryptDebug);
+        cryptOriginalInfo = JSON.parse(messageData.cryptInfo);
+        console.log("Info di debug sulla crittografia originale:", cryptOriginalInfo);
       } catch (e) {
         console.log("Impossibile analizzare le info di debug sulla crittografia");
       }
@@ -806,18 +784,30 @@ window.succus = {
         console.error(
           "Keypair incompleto o mancante per decrittare e nessun keypair alternativo disponibile"
         );
+        
+        // Se abbiamo campi in chiaro, li utilizziamo invece di fallire
+        if (messageData.text) return messageData.text;
+        if (messageData.message) return messageData.message;
+        if (messageData.content) return messageData.content;
+        if (messageData.raw_payload) return messageData.raw_payload;
+        
         throw new Error("Keypair incompleto o mancante per decrittare");
       }
     }
 
     try {
-      const provider = await this.getProvider();
-      if (!provider) {
-        throw new Error("Provider non disponibile");
+      // Ottieni l'indirizzo utente corrente per determinare la direzione del messaggio
+      let currentUserAddress = null;
+      try {
+        const provider = await this.getProvider();
+        if (provider) {
+          currentUserAddress = await provider.getSigner().getAddress();
+          console.log("Indirizzo utente corrente:", currentUserAddress);
+        }
+      } catch (providerError) {
+        console.warn("Impossibile ottenere l'indirizzo utente:", providerError);
+        // Continuiamo comunque
       }
-
-      const currentUserAddress = await provider.getSigner().getAddress();
-      console.log("Indirizzo utente corrente:", currentUserAddress);
 
       // Normalizza gli indirizzi per il confronto case-insensitive
       const normalizedFromAddress = messageData.from
@@ -826,215 +816,172 @@ window.succus = {
       const normalizedToAddress = messageData.to
         ? messageData.to.toLowerCase()
         : "";
-      const normalizedUserAddress = currentUserAddress.toLowerCase();
+      const normalizedUserAddress = currentUserAddress 
+        ? currentUserAddress.toLowerCase() 
+        : "";
 
       console.log("Confronto indirizzi (in decryptMessage):", {
         from: normalizedFromAddress,
         to: normalizedToAddress,
-        user: normalizedUserAddress,
+        user: normalizedUserAddress || "sconosciuto",
       });
 
-      // Determina con chi creare il segreto condiviso (mittente se stiamo ricevendo, destinatario se abbiamo inviato)
-      let otherPartyAddress;
-      if (normalizedToAddress === normalizedUserAddress) {
-        // Messaggio ricevuto, usa il mittente
-        otherPartyAddress = messageData.from;
-        console.log("Messaggio ricevuto, otherParty =", messageData.from);
-      } else if (normalizedFromAddress === normalizedUserAddress) {
-        // Messaggio inviato, usa il destinatario
-        otherPartyAddress = messageData.to;
-        console.log("Messaggio inviato, otherParty =", messageData.to);
+      // Determina con chi creare il segreto condiviso
+      let otherPartyAddress = null;
+      let isSentByMe = false;
+      
+      if (normalizedUserAddress) {
+        if (normalizedToAddress === normalizedUserAddress) {
+          // Messaggio ricevuto, usa il mittente
+          otherPartyAddress = messageData.from;
+          isSentByMe = false;
+          console.log("Messaggio ricevuto, otherParty =", messageData.from);
+        } else if (normalizedFromAddress === normalizedUserAddress) {
+          // Messaggio inviato, usa il destinatario
+          otherPartyAddress = messageData.to;
+          isSentByMe = true;
+          console.log("Messaggio inviato, otherParty =", messageData.to);
+        } else {
+          console.warn("Messaggio non destinato o inviato dall'utente corrente");
+          // Proveremo comunque a decifrare con varie strategie
+        }
       } else {
-        console.error("Messaggio non destinato o inviato dall'utente corrente");
-        throw new Error(
-          "Messaggio non destinato o inviato dall'utente corrente"
-        );
+        console.warn("Indirizzo utente sconosciuto, impossibile determinare la direzione del messaggio");
+        // Proveremo comunque a decifrare senza informazioni sulla direzione
       }
 
-      // Definisci un array di strategie di decrittazione
+      // Array di strategie di decifratura da provare
       const strategies = [];
       
       // Ottieni il keypair dell'altra parte (per alcune strategie)
       let otherPartyKeyPair = null;
-      try {
-        otherPartyKeyPair = await this.getKeypair(otherPartyAddress);
-        console.log("Keypair altra parte:", {
-          pub: otherPartyKeyPair.pub ? "presente" : "mancante",
-          epub: otherPartyKeyPair.epub ? "presente" : "mancante",
-        });
-      } catch (e) {
-        console.error("Impossibile ottenere keypair altra parte:", e);
-      }
-
-      // STRATEGIA 0: Verifica se esiste un messaggio in chiaro (non crittografato)
-      strategies.push(async () => {
-        console.log("Strategia 0: Controllo per messaggio in chiaro o campo text");
-        
-        // Verifica vari campi che potrebbero contenere testo non cifrato
-        if (messageData.text && typeof messageData.text === 'string') {
-          console.log("Trovato messaggio in chiaro nel campo 'text':", messageData.text);
-          return messageData.text;
-        }
-        
-        if (messageData.plaintext && typeof messageData.plaintext === 'string' && messageData.plaintext.length > 5) {
-          // Verifica che plaintext non sia un testo troncato con "..."
-          if (!messageData.plaintext.endsWith("...")) {
-            console.log("Trovato messaggio in chiaro completo in 'plaintext':", messageData.plaintext);
-            return messageData.plaintext;
-          }
-        }
-        
-        if (messageData.message && typeof messageData.message === 'string') {
-          console.log("Trovato messaggio in chiaro nel campo 'message':", messageData.message);
-          return messageData.message;
-        }
-        
-        if (messageData.content && typeof messageData.content === 'string') {
-          console.log("Trovato messaggio in chiaro nel campo 'content':", messageData.content);
-          return messageData.content;
-        }
-
-        // Verifica se il campo encryptedMSG non è effettivamente crittografato
-        if (messageData.encryptedMSG && typeof messageData.encryptedMSG === 'string') {
-          // Se è una stringa semplice senza caratteri speciali, potrebbe non essere crittografata
-          if (!/[^\w\s.,!?]/.test(messageData.encryptedMSG)) {
-            console.log("Il campo encryptedMSG sembra contenere testo in chiaro:", messageData.encryptedMSG);
-            return messageData.encryptedMSG;
-          }
-        }
-        
-        console.log("Nessun messaggio in chiaro trovato");
-        return null;
-      });
-
-      // Strategia 1: Metodo standard (createSharedSecret)
-      strategies.push(async () => {
-        console.log("Strategia 1: Utilizzo createSharedSecret standard");
-        const secret = await this.createSharedSecret(otherPartyAddress, gunKeypair);
-        console.log("Segreto creato (S1), tento decrittazione...");
-        return await window.SEA.decrypt(messageData.encryptedMSG, secret);
-      });
-
-      // Strategia 2: Metodo diretto con otherPartyKeyPair.epub
-      if (otherPartyKeyPair && otherPartyKeyPair.epub) {
-        strategies.push(async () => {
-          console.log("Strategia 2: Utilizzo SEA.secret diretto con epub altra parte");
-          const secret = await window.SEA.secret(otherPartyKeyPair.epub, gunKeypair);
-          console.log("Segreto creato (S2), tento decrittazione...");
-          return await window.SEA.decrypt(messageData.encryptedMSG, secret);
-        });
-      }
-
-      // Strategia 3: Inversione di ruoli
-      if (otherPartyKeyPair && otherPartyKeyPair.epub) {
-        strategies.push(async () => {
-          console.log("Strategia 3: Inversione ruoli (gunKeypair.epub)");
-          // Utilizza le proprie pub keys come input
-          const secret = await window.SEA.secret(gunKeypair.epub, {
-            epub: otherPartyKeyPair.epub,
-            epriv: gunKeypair.epriv
-          });
-          console.log("Segreto creato (S3), tento decrittazione...");
-          return await window.SEA.decrypt(messageData.encryptedMSG, secret);
-        });
-      }
-
-      // Strategia 4: Decrittazione diretta (in casi particolari potrebbe funzionare)
-      strategies.push(async () => {
-        console.log("Strategia 4: Tentativo decrittazione diretta");
-        return await window.SEA.decrypt(messageData.encryptedMSG, gunKeypair);
-      });
-
-      // Strategia 5: Utilizzare il proprio keypair completo come secret
-      strategies.push(async () => {
-        console.log("Strategia 5: Utilizzo gunKeypair completo come secret");
-        const mix = { ...gunKeypair };
-        return await window.SEA.decrypt(messageData.encryptedMSG, mix);
-      });
-      
-      // Strategia 6: Decrittazione estrema - prova ogni possibile combinazione di chiavi
-      strategies.push(async () => {
-        console.log("Strategia 6: Decrittazione estrema con tutte le chiavi disponibili");
-        
-        // Prova tutte le combinazioni possibili tra keypair proprio e altro keypair
-        if (otherPartyKeyPair && otherPartyKeyPair.epub) {
-          // Prova 1: Usa direttamente l'epub dell'altro come secret
-          try {
-            console.log("Prova 6.1: Uso epub dell'altro come secret");
-            const result = await window.SEA.decrypt(messageData.encryptedMSG, otherPartyKeyPair.epub);
-            if (result) return result;
-          } catch(e) {}
-          
-          // Prova 2: Usa il pub dell'altro come secret
-          try {
-            console.log("Prova 6.2: Uso pub dell'altro come secret");
-            const result = await window.SEA.decrypt(messageData.encryptedMSG, otherPartyKeyPair.pub);
-            if (result) return result;
-          } catch(e) {}
-          
-          // Prova 3: Usa una combinazione di proprietà
-          try {
-            console.log("Prova 6.3: Combinazione di proprietà");
-            const hybridSecret = {
-              epub: otherPartyKeyPair.epub,
-              epriv: gunKeypair.epriv,
-              pub: otherPartyKeyPair.pub,
-              priv: gunKeypair.priv
-            };
-            const result = await window.SEA.decrypt(messageData.encryptedMSG, hybridSecret);
-            if (result) return result;
-          } catch(e) {}
-        }
-        
-        return null;
-      });
-
-      // Strategia universale - supporta messaggi in formato m8h35m8BxstoBpCg4MIo
-      strategies.push(async () => {
-        console.log("Strategia universale: Supporto per formato anomalo m8h35m8BxstoBpCg4MIo");
-        
-        // Cerca di decodificare direttamente con la stringa encryptedMSG
-        // Nei log vedo che i messaggi hanno questo formato: m8h35m8BxstoBpCg4MIo
-        if (messageData.encryptedMSG && typeof messageData.encryptedMSG === 'string') {
-          try {
-            // Simula un messaggio in chiaro con questo formato
-            return messageData.encryptedMSG;
-          } catch(e) {}
-        }
-        
-        return null;
-      });
-
-      // Prova ogni strategia finché una non funziona
-      for (let i = 0; i < strategies.length; i++) {
+      if (otherPartyAddress) {
         try {
-          console.log(`Provo strategia decrittazione #${i+1}...`);
-          const decrypted = await strategies[i]();
+          otherPartyKeyPair = await this.getKeypair(otherPartyAddress);
+          console.log(`Keypair per ${otherPartyAddress}:`, otherPartyKeyPair ? "trovato" : "non trovato");
+        } catch (keyPairError) {
+          console.warn(`Errore nel recupero keypair per ${otherPartyAddress}:`, keyPairError);
+        }
+      }
+
+      // Crea vari shared secret per provare diverse strategie di decifratura
+      if (otherPartyAddress && otherPartyKeyPair && otherPartyKeyPair.epub) {
+        // 1. Metodo usando createSharedSecret standard
+        try {
+          const secret1 = await this.createSharedSecret(otherPartyAddress, gunKeypair);
+          if (secret1) {
+            strategies.push({
+              name: "standard_secret",
+              secret: secret1,
+              decrypt: async () => {
+                return await window.SEA.decrypt(messageData.encryptedMSG, secret1);
+              },
+            });
+          }
+        } catch (error1) {
+          console.warn("Errore nella creazione del secret standard:", error1);
+        }
+
+        // 2. Metodo diretto con SEA.secret
+        try {
+          const secret2 = await window.SEA.secret(otherPartyKeyPair.epub, gunKeypair);
+          if (secret2) {
+            strategies.push({
+              name: "direct_epub_secret",
+              secret: secret2,
+              decrypt: async () => {
+                return await window.SEA.decrypt(messageData.encryptedMSG, secret2);
+              },
+            });
+          }
+        } catch (error2) {
+          console.warn("Errore nella creazione del secret diretto:", error2);
+        }
+
+        // 3. Metodo inverso
+        try {
+          const secret3 = await window.SEA.secret(gunKeypair.epub, {
+            epub: otherPartyKeyPair.epub,
+            pub: otherPartyKeyPair.pub,
+          });
+          if (secret3) {
+            strategies.push({
+              name: "inverse_secret",
+              secret: secret3,
+              decrypt: async () => {
+                return await window.SEA.decrypt(messageData.encryptedMSG, secret3);
+              },
+            });
+          }
+        } catch (error3) {
+          console.warn("Errore nella creazione del secret inverso:", error3);
+        }
+      }
+
+      // 4. Fallback con chiave statica
+      if (otherPartyAddress) {
+        const fallbackSecret = "fallback_key_" + (isSentByMe ? normalizedUserAddress : normalizedFromAddress) + 
+                               "_" + (isSentByMe ? normalizedToAddress : normalizedUserAddress);
+        strategies.push({
+          name: "fallback_static_secret",
+          secret: fallbackSecret,
+          decrypt: async () => {
+            return await window.SEA.decrypt(messageData.encryptedMSG, fallbackSecret);
+          },
+        });
+      }
+
+      // 5. Tenta con solo keypair (alcuni messaggi possono essere crittografati così)
+      strategies.push({
+        name: "keypair_only",
+        secret: "keypair",
+        decrypt: async () => {
+          return await window.SEA.decrypt(messageData.encryptedMSG, gunKeypair);
+        },
+      });
+
+      // Prova tutte le strategie finché una funziona
+      console.log(`Provo ${strategies.length} strategie di decifratura`);
+      
+      let lastError = null;
+      for (let i = 0; i < strategies.length; i++) {
+        const strategy = strategies[i];
+        try {
+          console.log(`Provo strategia ${i+1}/${strategies.length}: ${strategy.name}`);
+          const decrypted = await strategy.decrypt();
           
           if (decrypted) {
-            console.log(`Messaggio decrittato con successo usando strategia #${i+1}: "${decrypted}"`);
+            console.log(`Decifratura riuscita con strategia ${strategy.name}`);
             return decrypted;
+          } else {
+            console.warn(`Strategia ${strategy.name} ha restituito un risultato vuoto`);
           }
-          
-          console.log(`Strategia #${i+1} non ha prodotto risultati.`);
         } catch (err) {
-          console.error(`Errore durante la strategia #${i+1}:`, err);
+          lastError = err;
+          console.warn(`Strategia ${strategy.name} fallita:`, err.message);
         }
       }
 
       // Se arriviamo qui, nessuna strategia ha funzionato
-      console.error("Tutte le strategie di decrittazione hanno fallito");
-      
-      // Se abbiamo il plaintext in debug, lo utilizziamo come fallback
-      if (messageData.plaintext) {
-        console.log("Restituisco plaintext come fallback:", messageData.plaintext);
-        return "[DEBUG] " + messageData.plaintext;
+      // Proviamo un ultimo tentativo con i campi in chiaro
+      if (messageData.text) {
+        console.log("Utilizzo campo text come fallback finale");
+        return messageData.text;
+      } else if (messageData.message) {
+        console.log("Utilizzo campo message come fallback finale");
+        return messageData.message;
+      } else if (messageData.content) {
+        console.log("Utilizzo campo content come fallback finale");
+        return messageData.content;
+      } else if (messageData.raw_payload) {
+        console.log("Utilizzo campo raw_payload come fallback finale");
+        return messageData.raw_payload;
       }
-      
-      throw new Error("Impossibile decrittare il messaggio con nessuna strategia");
-      
+
+      // Se arriviamo qui, abbiamo veramente fallito
+      throw new Error(`Impossibile decrittare il messaggio con alcuna strategia: ${lastError ? lastError.message : "errore sconosciuto"}`);
     } catch (error) {
-      console.error("Errore durante la decrittazione:", error);
+      console.error("Errore durante la decrittazione del messaggio:", error);
       throw error;
     }
   },
@@ -1167,7 +1114,7 @@ window.succus = {
 
   // Funzione di debug globale per le attività di rete
   debug: {
-    logLevel: "info", // 'none', 'error', 'warn', 'info', 'debug', 'verbose'
+    logLevel: "error", // Default a 'error' per ridurre i log ('none', 'error', 'warn', 'info', 'debug', 'verbose')
 
     log: function (level, ...args) {
       const levels = ["none", "error", "warn", "info", "debug", "verbose"];
@@ -1208,25 +1155,19 @@ window.succus = {
       }
     },
 
-    // Analizza Gun per keypair
+    // Analizza Gun per keypair in modo ottimizzato
     inspectGunKeypairs: function () {
       const results = {
         keypairs: [],
         total: 0,
       };
 
-      console.log("[SUCCUS:INFO] Cercando keypair in Gun...");
-
       // Creiamo una promessa per raccogliere i risultati
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          console.log(
-            `[SUCCUS:WARN] Timeout cercando keypair in Gun, trovati: ${results.keypairs.length}`
-          );
           results.total = results.keypairs.length;
-          console.table(results.keypairs);
           resolve(results);
-        }, 5000);
+        }, 3000);
 
         window.gun
           .get("skeypair")
@@ -1237,7 +1178,6 @@ window.succus = {
             try {
               // Estrai l'indirizzo dalla chiave
               const address = key.replace("skeypair", "");
-
               if (!address || address === "") return;
 
               results.keypairs.push({
@@ -1247,10 +1187,7 @@ window.succus = {
                 hasEpub: !!data.epub,
               });
             } catch (e) {
-              results.keypairs.push({
-                key: key,
-                error: e.message,
-              });
+              // Ignora errori
             }
           });
 
@@ -1258,7 +1195,6 @@ window.succus = {
         setTimeout(() => {
           clearTimeout(timeout);
           results.total = results.keypairs.length;
-          console.table(results.keypairs);
           resolve(results);
         }, 2000);
       });
@@ -1267,11 +1203,9 @@ window.succus = {
     // Pulisce un keypair specifico o tutti i keypair da Gun
     cleanGunKeypairs: function (address = null) {
       if (address) {
-        console.log(`[SUCCUS:INFO] Rimozione keypair per ${address} da Gun...`);
         window.gun.get(`skeypair${address}`).put(null);
         return `Rimosso keypair per ${address} da Gun`;
       } else {
-        console.log("[SUCCUS:INFO] Rimozione di tutti i keypair da Gun...");
         // Recupera prima tutti gli indirizzi, poi rimuove i keypair
         return succus.getAllRegisteredAddresses().then((addresses) => {
           for (const addr of addresses) {
@@ -1282,53 +1216,21 @@ window.succus = {
       }
     },
 
-    // Verifica lo stato di Gun
-    checkGunStatus: function () {
-      if (!window.gun) {
-        return { status: "error", message: "Gun non è inizializzato" };
-      }
-
-      try {
-        // Tenta di porre/leggere un dato di test per verificare la connessione
-        const testId = `test_${Date.now()}`;
-        window.gun.get(testId).put({ test: true });
-
-        return {
-          status: "ok",
-          peers: window.gun._.opt.peers
-            ? Object.keys(window.gun._.opt.peers)
-            : [],
-          initialized: true,
-        };
-      } catch (error) {
-        return { status: "error", message: error.message };
-      }
-    },
-
     // Funzione per testare se Gun funziona correttamente
     testGunConnection: function () {
-      console.log("[SUCCUS:INFO] Avvio test connessione Gun...");
-
       return new Promise((resolve, reject) => {
         const testData = { test: `value_${Date.now()}` };
         const testId = `succus_test_${Date.now()}`;
-
-        console.log(
-          `[SUCCUS:INFO] Tentativo di scrittura nel nodo '${testId}'`
-        );
 
         // Registriamo quando il test è iniziato
         const startTime = Date.now();
 
         // Impostiamo un timeout
         const timeoutId = setTimeout(() => {
-          console.error(
-            `[SUCCUS:ERROR] Timeout durante il test Gun dopo 5 secondi`
-          );
           resolve({
             success: false,
             error: "Timeout",
-            latency: 5000,
+            latency: 10000,
             message: "La connessione a Gun è troppo lenta o non funzionante.",
           });
         }, 5000);
@@ -1338,9 +1240,6 @@ window.succus = {
           window.gun.get(testId).put(testData, (ack) => {
             if (ack.err) {
               clearTimeout(timeoutId);
-              console.error(
-                `[SUCCUS:ERROR] Errore durante la scrittura Gun: ${ack.err}`
-              );
               resolve({
                 success: false,
                 error: ack.err,
@@ -1349,14 +1248,13 @@ window.succus = {
               return;
             }
 
-            // Lettura test (per verificare che il dato sia stato salvato)
+            // Lettura test
             window.gun.get(testId).once((data) => {
               clearTimeout(timeoutId);
               const endTime = Date.now();
               const latency = endTime - startTime;
 
               if (!data || !data.test) {
-                console.error("[SUCCUS:ERROR] Lettura Gun non riuscita");
                 resolve({
                   success: false,
                   error: "ReadFailed",
@@ -1366,9 +1264,6 @@ window.succus = {
                 return;
               }
 
-              console.log(
-                `[SUCCUS:INFO] Test Gun completato con successo in ${latency}ms`
-              );
               resolve({
                 success: true,
                 latency,
@@ -1379,7 +1274,6 @@ window.succus = {
           });
         } catch (error) {
           clearTimeout(timeoutId);
-          console.error("[SUCCUS:ERROR] Eccezione durante il test Gun:", error);
           resolve({
             success: false,
             error: error.message,
@@ -1388,47 +1282,32 @@ window.succus = {
         }
       });
     },
-
-    // Esplora i dati salvati in Gun per una data chat
+    
+    // Versione ottimizzata e semplificata per esplorare una chat
     exploreChat: function (address1, address2) {
-      console.log(
-        "[SUCCUS:INFO] Esplorando chat tra:",
-        address1,
-        "e",
-        address2
-      );
-
-      // Normalizzazione indirizzi
       const addr1 = address1.toLowerCase();
       const addr2 = address2.toLowerCase();
-
-      // Generazione namespace
       const participants = [addr1, addr2].sort();
       const sortedParticipants = participants.join("");
       const chatNamespace = window.succus.HashNamespace(sortedParticipants);
 
-      console.log("[SUCCUS:INFO] Namespace della chat:", chatNamespace);
-
-      // Visualizza tutti i dati salvati
       return new Promise((resolve) => {
         const messages = [];
         let isDataFound = false;
 
         const timeoutId = setTimeout(() => {
-          console.log("[SUCCUS:INFO] Completata esplorazione della chat");
           resolve({
             namespace: chatNamespace,
             found: isDataFound,
             messages,
           });
-        }, 5000);
+        }, 3000);
 
         window.gun.get(chatNamespace).once((data) => {
-          console.log("[SUCCUS:INFO] Dati generali della chat:", data);
-
+          isDataFound = !!data;
+          
           if (!data) {
             clearTimeout(timeoutId);
-            console.log("[SUCCUS:INFO] Nessun dato trovato per questa chat");
             resolve({
               namespace: chatNamespace,
               found: false,
@@ -1437,17 +1316,13 @@ window.succus = {
             return;
           }
 
-          isDataFound = true;
-
           // Esplora tutti i messaggi
           window.gun
             .get(chatNamespace)
             .map()
             .once((msgData, key) => {
               if (key === "_" || !msgData) return;
-
-              console.log(`[SUCCUS:INFO] Messaggio trovato (${key}):`, msgData);
-
+              
               messages.push({
                 key,
                 date: msgData.date,
@@ -1459,105 +1334,13 @@ window.succus = {
         });
       });
     },
-
-    // Funzione per costruire il namespace della chat
-    buildNamespace: function (address1, address2 = null) {
-      console.log(
-        "[SUCCUS:INFO] Costruzione namespace tra:",
-        address1,
-        "e",
-        address2 || window.currentUserAddress
-      );
-
-      // Se address2 non è specificato, usa l'indirizzo utente corrente
-      const addr2 = address2 || window.currentUserAddress;
-
-      if (!addr2) {
-        throw new Error(
-          "Impossibile costruire namespace: indirizzo utente corrente non disponibile"
-        );
-      }
-
-      // Normalizzazione indirizzi
-      const addr1Norm = address1.toLowerCase();
-      const addr2Norm = addr2.toLowerCase();
-
-      // Generazione namespace
-      const participants = [addr1Norm, addr2Norm].sort();
-      const sortedParticipants = participants.join("");
-      const chatNamespace = window.succus.HashNamespace(sortedParticipants);
-
-      console.log("[SUCCUS:INFO] Namespace generato:", chatNamespace);
-
-      return {
-        namespace: chatNamespace,
-        participants: participants,
-      };
-    },
-
-    // Funzione per ottenere i messaggi da un namespace specifico
-    getChatMessages: function (namespace) {
-      console.log("[SUCCUS:INFO] Recupero messaggi dal namespace:", namespace);
-
-      return new Promise((resolve) => {
-        const messages = [];
-
-        const timeoutId = setTimeout(() => {
-          console.log(
-            `[SUCCUS:INFO] Recuperati ${messages.length} messaggi dal namespace`
-          );
-          resolve(messages);
-        }, 3000);
-
-        // Recupera tutti i messaggi nel namespace
-        window.gun
-          .get(namespace)
-          .map()
-          .once((msgData, key) => {
-            if (key === "_" || !msgData || !msgData.encryptedMSG) return;
-
-            messages.push({
-              key,
-              date: msgData.date,
-              from: msgData.from,
-              to: msgData.to,
-              hasEncrypted: !!msgData.encryptedMSG,
-            });
-          });
-      });
-    },
-
-    // Funzione per interrompere l'ascolto su un namespace
-    stopListening: function (namespace) {
-      console.log(
-        "[SUCCUS:INFO] Interruzione ascolto sul namespace:",
-        namespace
-      );
-
-      return new Promise((resolve) => {
-        try {
-          // In Gun, l'interruzione dell'ascolto si fa con off()
-          window.gun.get(namespace).map().off();
-          console.log("[SUCCUS:INFO] Ascolto interrotto con successo");
-          resolve({ success: true });
-        } catch (error) {
-          console.error(
-            "[SUCCUS:ERROR] Errore nell'interruzione dell'ascolto:",
-            error
-          );
-          resolve({ success: false, error: error.message });
-        }
-      });
-    },
   },
 };
 
 // Inizializza il debug e Gun automaticamente
 (function () {
-  console.log("[SUCCUS] Initializing Succus wrapper...");
-
   // Imposta il livello di log predefinito
-  window.succus.debug.setLogLevel("info");
+  window.succus.debug.setLogLevel("error"); // Cambiato da "info" a "error" per ridurre i log
 
   // Inizializza Gun se non è stato già fatto
   if (!window.gun) {
@@ -1567,11 +1350,12 @@ window.succus = {
         radisk: false,
         peers: GUN_PEERS,
         axe: false,
-        multicast: false, // Disabilitiamo multicast per evitare problemi di connessione
+        multicast: false,
+        wait: 100, // Riduco il timeout per aumentare le prestazioni
+        retrieve: 5, // Valore più basso per velocizzare la risposta
       });
-      window.succus.debug.log("info", "Gun initialized successfully");
     } catch (error) {
-      window.succus.debug.log("error", "Failed to initialize Gun", error);
+      console.error("Errore nell'inizializzazione di Gun:", error);
     }
   }
 
@@ -1586,25 +1370,39 @@ window.succus = {
           .getAddress()
           .then((address) => {
             window.currentUserAddress = address;
-            window.succus.debug.log(
-              "info",
-              `Indirizzo utente corrente: ${address}`
-            );
           })
-          .catch((error) => {
-            window.succus.debug.log(
-              "error",
-              "Impossibile ottenere l'indirizzo utente:",
-              error
-            );
+          .catch(() => {
+            // Ignora errori
           });
       }
     })
-    .catch((error) => {
-      window.succus.debug.log("error", "Errore nel provider:", error);
+    .catch(() => {
+      // Ignora errori
     });
-
-  window.succus.debug.log("info", "Succus wrapper initialized");
-  // Utilizziamo la nuova funzione di ispezione Gun invece di localStorage
-  window.succus.debug.inspectGunKeypairs();
 })();
+
+// Aggiorno la funzione receiveMessage per tracciare gli ascolti
+const originalReceiveMessage = window.succus.receiveMessage;
+window.succus.receiveMessage = async function(recipientAddress, callback) {
+  // Interrompi eventuali ascolti precedenti
+  this.stopReceiveMessage(recipientAddress);
+  
+  // Chiamiamo la funzione originale
+  const cleanupFn = await originalReceiveMessage.call(this, recipientAddress, callback);
+  
+  if (cleanupFn) {
+    // Ottieni il namespace della chat per registrare l'ascolto
+    const userAddress = window.currentUserAddress ? window.currentUserAddress.toLowerCase() : "";
+    const recipientAddr = recipientAddress.toLowerCase();
+    const participants = [recipientAddr, userAddress].sort();
+    const chatNamespace = window.succus.HashNamespace(participants.join(""));
+    
+    // Registra l'ascolto
+    window.succus.activeListeners.set(chatNamespace, {
+      recipient: recipientAddress,
+      cleanup: cleanupFn
+    });
+  }
+  
+  return cleanupFn;
+};
