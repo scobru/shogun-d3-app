@@ -217,7 +217,7 @@
         document.getElementById('messageInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                sendMessage();
+                sendMessageDirect();
             }
         });
         
@@ -897,7 +897,7 @@
         // Event listeners
         connectWalletBtn.addEventListener('click', connectWallet);
         generateKeypairBtn.addEventListener('click', generateNewKeypair);
-        sendMessageBtn.addEventListener('click', sendMessage);
+        sendMessageBtn.addEventListener('click', sendMessageDirect);
         
         // Debug button
         document.getElementById('debugButton').addEventListener('click', async () => {
@@ -980,7 +980,7 @@
         
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                sendMessage();
+                sendMessageDirect();
             }
         });
         
@@ -1851,7 +1851,7 @@
         }
 
         // Funzione per inviare un messaggio
-        async function sendMessage() {
+        async function sendMessageDirect() {
             // Ottieni il messaggio dall'input
             const messageText = messageInput.value.trim();
             
