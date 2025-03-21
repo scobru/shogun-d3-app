@@ -16,9 +16,8 @@ const GUN_PEERS = [
     peers: GUN_PEERS,
     localStorage: false,
     radisk: false,
-    // Altri parametri di configurazione...
     webauthn: {
-      enabled: false // Disabilita webauthn se non necessario
+      enabled: false 
     }
   });
   
@@ -106,7 +105,7 @@ const GUN_PEERS = [
         window.gunKeyPair = gunUser._.sea;
         
         // Registra anche il keypair pubblico nel formato usato dal wrapper 
-        await this.registerKeypair(address, {
+        this.registerKeypair(address, {
           pub: window.gunKeyPair.pub,
           epub: window.gunKeyPair.epub
         });

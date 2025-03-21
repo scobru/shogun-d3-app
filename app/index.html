@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Succus Chat - Demo</title>
+    <title>Shogun-D3 Chat - Demo</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -231,10 +231,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Succus Chat Demo</h1>
+        <h1>Shogun-D3 Chat Demo</h1>
         
         <div class="info">
-            <p>Questa è una demo di chat decentralizzata utilizzando la libreria Succus. Per utilizzarla hai bisogno di:</p>
+            <p>Questa è una demo di chat decentralizzata utilizzando la libreria Shogun-D3. Per utilizzarla hai bisogno di:</p>
             <ul>
                 <li>Metamask installato nel browser</li>
                 <li>Un indirizzo Ethereum</li>
@@ -282,7 +282,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
     <script src="shogun-core.js" ></script>
-    <script src="wrapper2.js"></script>
+    <script src="d3.js"></script>
     <script>
         // Elementi DOM
         const connectWalletBtn = document.getElementById('connectWallet');
@@ -307,7 +307,7 @@
         // Funzioni per persistenza dati in localStorage
         const saveMessagesToLocalStorage = () => {
             try {
-                localStorage.setItem('succus_chat_messages', JSON.stringify(chatMessages));
+                localStorage.setItem('shogun_d3_chat_messages', JSON.stringify(chatMessages));
                 console.log('Messaggi salvati in localStorage');
             } catch (error) {
                 console.error('Errore nel salvare i messaggi in localStorage:', error);
@@ -316,7 +316,13 @@
         
         const loadMessagesFromLocalStorage = () => {
             try {
-                const saved = localStorage.getItem('succus_chat_messages');
+                // Prova prima a caricare con il nuovo nome
+                let saved = localStorage.getItem('shogun_d3_chat_messages');
+                // Se non trova, prova con il vecchio nome per retrocompatibilità
+                if (!saved) {
+                    saved = localStorage.getItem('succus_chat_messages');
+                }
+                
                 if (saved) {
                     chatMessages = JSON.parse(saved);
                     console.log('Messaggi caricati da localStorage:', Object.keys(chatMessages).length, 'conversazioni trovate');
@@ -334,7 +340,7 @@
         // Funzione per controllare lo stato di Gun
         const checkGunStatus = async () => {
             try {
-                const status = await window.succus.debug.testGunConnection();
+                const status = await window.d3.debug.testGunConnection();
                 const statusElement = document.getElementById('gunStatus');
                 
                 if (status.success) {
@@ -371,8 +377,8 @@
         // Funzione per connettere il wallet
         const connectWallet = async () => {
             try {
-                // Usa il metodo connectWithMetaMask di Succus che gestisce tutto il flusso di autenticazione
-                const result = await succus.connectWithMetaMask();
+                // Usa il metodo connectWithMetaMask di Shogun-D3 che gestisce tutto il flusso di autenticazione
+                const result = await d3.connectWithMetaMask();
                 
                 if (!result || !result.address) {
                     console.error("Errore nella connessione: risultato non valido", result);
@@ -472,7 +478,7 @@
             });
         };
         
-        // Funzione per inviare un messaggio utilizzando direttamente succus.sendmessage
+        // Funzione per inviare un messaggio utilizzando direttamente d3.sendmessage
         const sendMessage = async () => {
             const message = messageInput.value.trim();
             const recipientAddress = recipientAddressInput.value.trim();
@@ -492,7 +498,7 @@
                 
                 // Verifica che il destinatario abbia registrato una chiave pubblica
                 console.log(`Verifica keypair per destinatario ${recipientAddress}`);
-                const recipientPubKey = await succus.getKeypair(recipientAddress);
+                const recipientPubKey = await d3.getKeypair(recipientAddress);
                 
                 if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
                     // Rimuovi il messaggio di caricamento
@@ -502,14 +508,14 @@
                     
                     // Prova ad auto-generare una chiave pubblica per test (solo in ambiente demo)
                     if (confirm(`Il destinatario ${recipientAddress} non ha un keypair valido. Vuoi generare una chiave pubblica per questo utente (solo per test)?`)) {
-                        const tempKeyPair = await succus.SEA.pair();
+                        const tempKeyPair = await d3.SEA.pair();
                         const publicPart = {
                             pub: tempKeyPair.pub,
                             epub: tempKeyPair.epub
                         };
                         
                         // Registra la parte pubblica in Gun
-                        await succus.registerKeypair(recipientAddress, publicPart);
+                        await d3.registerKeypair(recipientAddress, publicPart);
                         
                         console.log(`Keypair pubblico generato e salvato per ${recipientAddress}:`, publicPart);
                         alert(`Keypair pubblico generato per ${recipientAddress}. Riprova a inviare il messaggio.`);
@@ -526,8 +532,8 @@
                     epub: recipientPubKey.epub ? recipientPubKey.epub.substring(0, 15) + "..." : "mancante"
                 });
                 
-                // Invia il messaggio usando la libreria Succus
-                const result = await succus.sendmessage(message, [recipientAddress], gunKeyPair);
+                // Invia il messaggio usando la libreria Shogun-D3
+                const result = await d3.sendmessage(message, [recipientAddress], gunKeyPair);
                 
                 // Rimuovi il messaggio di caricamento
                 messagesContainer.removeChild(loadingMsg);
@@ -613,14 +619,14 @@
             console.log(`Inizio ascolto conversazione con ${recipientAddr}`);
             
             // Interrompi ogni precedente ascolto per evitare callback multipli
-            window.succus.stopReceiveMessage && window.succus.stopReceiveMessage(recipientAddr);
+            window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
             
             // Eseguiamo un'analisi iniziale del namespace
             const normalizedRecipient = userAddress.toLowerCase();
             const normalizedSender = recipientAddr.toLowerCase();
             const participants = [normalizedSender, normalizedRecipient].sort();
             const sortedParticipants = participants.join("");
-            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            const chatNamespace = window.d3.HashNamespace(sortedParticipants);
             
             console.log(`Ascolto namespace: ${chatNamespace}`);
             
@@ -673,7 +679,7 @@
             const displayedMessages = new Set(knownMessageIds);
             
             // Utilizziamo la nuova versione di receiveMessage
-            window.succus.receiveMessage(recipientAddr, (messageData) => {
+            window.d3.receiveMessage(recipientAddr, (messageData) => {
                 // Ignora log verbosi
                 // console.log("Messaggio ricevuto dal callback:", messageData);
                 
@@ -834,7 +840,7 @@
             const normalizedSender = recipientAddr.toLowerCase();
             const participants = [normalizedSender, normalizedRecipient].sort();
             const sortedParticipants = participants.join("");
-            const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+            const chatNamespace = window.d3.HashNamespace(sortedParticipants);
             
             console.log("Namespace della chat:", chatNamespace);
             console.log("Participants array:", participants);
@@ -860,7 +866,7 @@
             });
             
             // Crea lo shared secret per decifrare i messaggi
-            const sharedSecret = await window.succus.createSharedSecret(recipientAddr, window.gunKeyPair);
+            const sharedSecret = await window.d3.createSharedSecret(recipientAddr, window.gunKeyPair);
             console.log("Shared secret creato per lettura diretta");
             
             // Inizializza l'array dei messaggi per questa conversazione se non esiste già
@@ -894,7 +900,7 @@
                         
                         try {
                             // Decodifica direttamente il messaggio
-                            const decrypted = await window.succus.decryptMessage(data, window.gunKeyPair);
+                            const decrypted = await window.d3.decryptMessage(data, window.gunKeyPair);
                             
                             // Prepara i dati per la visualizzazione
                             const timestamp = data.date || Date.now();
@@ -978,7 +984,7 @@
                             
                             try {
                                 // Tenta di decifrare il messaggio con diverse strategie
-                                const decrypted = await window.succus.decryptMessage(data, window.gunKeyPair);
+                                const decrypted = await window.d3.decryptMessage(data, window.gunKeyPair);
                                 console.log(`Messaggio decifrato con ascolto alternativo: ${decrypted}`);
                                 
                                 // Processa il messaggio qui...
