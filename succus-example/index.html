@@ -241,20 +241,17 @@
             </ul>
         </div>
         
-        <div class="connect-section">
+        <div id="wallet-section" class="connect-section">
             <button id="connectWallet">Connetti Wallet</button>
-            <button id="generateKeypair" disabled>Genera Keypair</button>
-            <button id="debugButton" style="background-color: #888;">Debug</button>
             <button id="refreshChat" style="background-color: #4682b4;">Ricarica Chat</button>
-            <button id="clearConversation" style="background-color: #d9534f;">Cancella Conversazione</button>
-            <div class="wallet-info" id="walletInfo"></div>
+            <div id="walletInfo" class="wallet-info"></div>
             <div class="connection-status" id="gunStatus">
                 <span class="status-indicator connecting"></span>
                 <span>Connessione a Gun...</span>
             </div>
         </div>
         
-        <div class="chat-section" id="chatSection">
+        <div id="chatSection" class="chat-section">
             <div class="chat-wrapper">
                 <div class="chat-sidebar">
                     <h3>Conversazioni</h3>
@@ -284,29 +281,11 @@
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
-    
-    <!-- Importa il nostro wrapper Succus -->
-    <script src="wrapper.js"></script>
+    <script src="shogun-core.js" ></script>
+    <script src="wrapper2.js"></script>
     <script>
-        // Debug function: controlla keypair presenti in Gun
-        const debugKeypairs = async () => {
-            console.log("### DEBUG KEYPAIRS ###");
-            
-            try {
-                const results = await window.succus.debug.inspectGunKeypairs();
-                console.log("Keypairs trovati in Gun:", results.total);
-                console.log("#####################");
-            } catch (error) {
-                console.error("Errore durante il debug dei keypair:", error);
-            }
-        };
-
-        // Esegui debug all'avvio
-        debugKeypairs();
-        
         // Elementi DOM
         const connectWalletBtn = document.getElementById('connectWallet');
-        const generateKeypairBtn = document.getElementById('generateKeypair');
         const walletInfoEl = document.getElementById('walletInfo');
         const chatSection = document.getElementById('chatSection');
         const recipientAddressInput = document.getElementById('recipientAddress');
@@ -347,40 +326,6 @@
                 console.error('Errore nel caricare i messaggi da localStorage:', error);
             }
             return false;
-        };
-        
-        // Funzione per eliminare una conversazione
-        const clearCurrentConversation = () => {
-            const recipientAddr = recipientAddressInput.value.trim();
-            if (!recipientAddr) {
-                alert("Seleziona prima una conversazione da eliminare");
-                return;
-            }
-            
-            if (confirm(`Sei sicuro di voler eliminare tutti i messaggi con ${recipientAddr}?`)) {
-                // Elimina i messaggi dalla memoria
-                if (chatMessages[recipientAddr]) {
-                    delete chatMessages[recipientAddr];
-                    console.log(`Conversazione con ${recipientAddr} eliminata dalla memoria`);
-                }
-                
-                // Aggiorna localStorage
-                saveMessagesToLocalStorage();
-                
-                // Aggiorna la lista delle conversazioni
-                updateConversationsList();
-                
-                // Pulisci l'interfaccia
-                messagesContainer.innerHTML = '';
-                
-                // Mostra un messaggio
-                const emptyMessage = document.createElement('div');
-                emptyMessage.className = 'message';
-                emptyMessage.style.textAlign = 'center';
-                emptyMessage.style.color = '#888';
-                emptyMessage.innerText = 'Conversazione eliminata. Invia un nuovo messaggio per iniziare.';
-                messagesContainer.appendChild(emptyMessage);
-            }
         };
         
         // Carica i messaggi da localStorage all'avvio
@@ -426,167 +371,42 @@
         // Funzione per connettere il wallet
         const connectWallet = async () => {
             try {
-                provider = await succus.getProvider();
-                if (!provider) return;
+                // Usa il metodo connectWithMetaMask di Succus che gestisce tutto il flusso di autenticazione
+                const result = await succus.connectWithMetaMask();
                 
-                const signer = provider.getSigner();
-                userAddress = await signer.getAddress();
-                wallet = signer;
+                if (!result || !result.address) {
+                    console.error("Errore nella connessione: risultato non valido", result);
+                    return;
+                }
                 
-                // Memorizza l'indirizzo dell'utente corrente
+                userAddress = result.address;
+                gunKeyPair = result.keypair;
+                
+                // Memorizza globalmente
                 window.currentUserAddress = userAddress;
+                window.gunKeyPair = gunKeyPair;
                 
+                console.log("Wallet connesso con successo:", userAddress);
+                console.log("KeyPair ottenuto:", {
+                    pub: gunKeyPair.pub ? "presente" : "mancante",
+                    epub: gunKeyPair.epub ? "presente" : "mancante",
+                    priv: gunKeyPair.priv ? "presente" : "mancante", 
+                    epriv: gunKeyPair.epriv ? "presente" : "mancante"
+                });
+                
+                // Aggiorna UI
                 walletInfoEl.innerHTML = `
                     <p>Wallet connesso!</p>
                     <p>Indirizzo: <code>${userAddress}</code></p>
                 `;
                 
-                generateKeypairBtn.disabled = false;
+                keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
                 
-                // Cerca se esiste già un keypair per questo indirizzo
-                checkExistingKeypair();
-                
+                // Abilita chat
+                chatSection.style.display = 'block';
             } catch (error) {
                 console.error("Errore durante la connessione al wallet:", error);
                 alert("Errore durante la connessione al wallet. Controlla la console per i dettagli.");
-            }
-        };
-        
-        // Verifica se esiste già un keypair per questo indirizzo
-        const checkExistingKeypair = async () => {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    console.log('Verifico se esiste già un keypair per', userAddress);
-                    
-                    // Verifica se c'è un keypair nella memoria della sessione corrente
-                    if (window.gunKeyPair && window.currentUserAddress === userAddress) {
-                        console.log('✓ Keypair già presente in memoria per questa sessione');
-                        gunKeyPair = window.gunKeyPair;
-                        
-                        keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
-                        
-                        // Verifica che il keypair sia completo
-                        if (gunKeyPair.priv && gunKeyPair.epriv && gunKeyPair.pub && gunKeyPair.epub) {
-                            console.log('✓ Il keypair è completo e valido');
-                        } else {
-                            console.warn('⚠️ Il keypair in memoria non è completo:', {
-                                pub: !!gunKeyPair.pub,
-                                epub: !!gunKeyPair.epub,
-                                priv: !!gunKeyPair.priv,
-                                epriv: !!gunKeyPair.epriv
-                            });
-                        }
-                        
-                        // Verifica la connessione a Gun
-                        console.log('Verifica connessione Gun...');
-                        const gunStatus = await window.succus.debug.testGunConnection();
-                        console.log('Stato connessione Gun:', gunStatus);
-                        
-                        // Mostra la sezione chat
-                        chatSection.style.display = 'block';
-                        
-                        resolve(window.gunKeyPair);
-                        return;
-                    }
-                    
-                    // Controlla se esiste un keypair in Gun
-                    console.log('Controllo keypair in Gun...');
-                    const existingKeypair = await window.succus.getKeypair(userAddress);
-                    
-                    if (existingKeypair && existingKeypair.pub && existingKeypair.epub) {
-                        console.log('✓ Trovata parte pubblica in Gun:', {
-                            pub: existingKeypair.pub.substring(0, 10) + "...",
-                            epub: existingKeypair.epub.substring(0, 10) + "..."
-                        });
-                        
-                        // Se abbiamo anche le chiavi private in memoria, utilizziamo il keypair completo
-                        if (window.gunKeyPair && window.gunKeyPair.priv && window.gunKeyPair.epriv) {
-                            console.log('✓ Keypair completo disponibile in memoria');
-                            gunKeyPair = window.gunKeyPair;
-                            
-                            keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
-                            
-                            // Mostra la sezione chat
-                            chatSection.style.display = 'block';
-                            
-                            resolve(window.gunKeyPair);
-                            return;
-                        }
-                        
-                        // Se troviamo solo le chiavi pubbliche, informiamo l'utente
-                        keyPairStatusElement.innerHTML = `
-                            <span class="warning">⚠️ Solo chiavi pubbliche trovate</span>
-                            <button id="generateNewKeypairBtn" class="custom-button">Genera keypair completo</button>
-                        `;
-                        
-                        document.getElementById('generateNewKeypairBtn').addEventListener('click', () => {
-                            generateNewKeypair().then(() => {
-                                // Dopo aver generato un nuovo keypair, inizializza la UI
-                                chatSection.style.display = 'block';
-                            });
-                        });
-                        
-                        resolve(null);
-                        return;
-                    }
-                    
-                    console.log('Nessun keypair trovato, è necessario generarne uno nuovo');
-                    // Se non troviamo un keypair, generiamo un nuovo keypair
-                    keyPairStatusElement.innerHTML = `
-                        <span class="warning">❌ Nessun keypair trovato</span>
-                        <button id="generateNewKeypairBtn" class="custom-button">Genera nuovo keypair</button>
-                    `;
-                    
-                    document.getElementById('generateNewKeypairBtn').addEventListener('click', () => {
-                        generateNewKeypair();
-                    });
-                    
-                    resolve(null);
-                } catch (error) {
-                    console.error('Errore durante la verifica del keypair:', error);
-                    keyPairStatusElement.innerHTML = `<span class="error">Errore: ${error.message}</span>`;
-                    reject(error);
-                }
-            });
-        };
-        
-        // Funzione per generare un keypair
-        const generateNewKeypair = async () => {
-            try {
-                // Verifica se esiste già un keypair in Gun
-                const hasKeypair = await window.succus.hasKeypair(userAddress);
-                
-                // Genera una nuova coppia di chiavi (parte pubblica e privata)
-                gunKeyPair = await succus.SEA.pair();
-                console.log("Nuovo keypair generato:", {
-                    pub: gunKeyPair.pub ? gunKeyPair.pub.substring(0, 15) + "..." : "mancante",
-                    epub: gunKeyPair.epub ? gunKeyPair.epub.substring(0, 15) + "..." : "mancante",
-                    priv: gunKeyPair.priv ? "presente" : "mancante",
-                    epriv: gunKeyPair.epriv ? "presente" : "mancante"
-                });
-                
-                // Memorizza il keypair completo per questa sessione
-                window.gunKeyPair = gunKeyPair;
-                
-                // Registra la parte pubblica della chiave in Gun
-                await succus.storeKeypair(userAddress, gunKeyPair);
-                
-                // Spiega all'utente cosa stiamo facendo
-                let keysMessage = "Nuovo keypair generato e registrato!";
-                if (hasKeypair) {
-                    keysMessage += "<p><small>Nota: è stato sovrascritto un keypair pubblico esistente.</small></p>";
-                }
-                
-                walletInfoEl.innerHTML += `
-                    <p>${keysMessage}</p>
-                    <p><small>Questo permette agli altri utenti di crittografare messaggi per te</small></p>
-                `;
-                
-                chatSection.style.display = 'block';
-                
-            } catch (error) {
-                console.error("Errore durante la generazione del keypair:", error);
-                alert("Errore durante la generazione del keypair. Controlla la console per i dettagli.");
             }
         };
         
@@ -663,9 +483,6 @@
             }
             
             try {
-                // Debug dei keypair prima di inviare
-                await debugKeypairs();
-                
                 // Aggiungi un messaggio di attesa
                 const loadingMsg = document.createElement('div');
                 loadingMsg.classList.add('message', 'sent');
@@ -955,95 +772,15 @@
         
         // Event listeners
         connectWalletBtn.addEventListener('click', connectWallet);
-        generateKeypairBtn.addEventListener('click', generateNewKeypair);
         sendMessageBtn.addEventListener('click', sendMessage);
         
-        // Debug button
-        document.getElementById('debugButton').addEventListener('click', async () => {
-            await debugKeypairs();
-            
-            // Pulisci i messaggi duplicati
-            const clearDuplicates = confirm("Vuoi pulire i messaggi duplicati?");
-            if (clearDuplicates) {
-                processedMessages.clear();
-                activeConversations.clear();
-                messagesContainer.innerHTML = '';
-                alert("Messaggi duplicati puliti. Inserisci di nuovo l'indirizzo del destinatario per ricaricare la conversazione.");
-            }
-            
-            // Richiedi di eseguire altre azioni di debug
-            const options = [
-                "Pulisci keypair da Gun",
-                "Genera keypair per un altro indirizzo",
-                "Mostra conversazioni attive",
-                "Ripristina keypair corrente",
-                "Esplora chat corrente",
-                "Cancella"
-            ];
-            
-            const action = prompt(`Seleziona un'azione di debug (inserisci il numero):\n${options.map((o, i) => `${i+1}. ${o}`).join('\n')}`);
-            
-            if (action === "1") {
-                if (confirm("Sei sicuro di voler pulire tutti i keypair da Gun?")) {
-                    const result = await succus.debug.cleanGunKeypairs();
-                    alert(result);
-                }
-            } else if (action === "2") {
-                const otherAddress = prompt("Inserisci l'indirizzo per cui vuoi generare un keypair pubblico:");
-                if (otherAddress && otherAddress.startsWith("0x")) {
-                    const tempKeyPair = await succus.SEA.pair();
-                    const publicPart = {
-                        pub: tempKeyPair.pub,
-                        epub: tempKeyPair.epub
-                    };
-                    
-                    // Registra la parte pubblica in Gun
-                    await succus.registerKeypair(otherAddress, publicPart);
-                    
-                    console.log(`Keypair pubblico generato per ${otherAddress}:`, publicPart);
-                    alert(`Keypair pubblico generato per ${otherAddress}.`);
-                    await debugKeypairs();
-                }
-            } else if (action === "3") {
-                const conversations = await succus.debugConversations();
-                console.log("Conversazioni trovate:", conversations);
-                alert(`${conversations.length} conversazioni trovate. Vedi console per dettagli.`);
-            } else if (action === "4") {
-                // Funzione per ripristinare il keypair corrente
-                if (confirm("Vuoi rigenerare il keypair corrente?")) {
-                    // Genera un nuovo keypair e lo registra
-                    await generateNewKeypair();
-                    alert("Keypair rigenerato con successo.");
-                }
-            } else if (action === "5") {
-                // Esplora la chat corrente
-                const recipientAddr = recipientAddressInput.value.trim();
-                if (recipientAddr && recipientAddr.startsWith('0x')) {
-                    console.log("Esplorazione chat con", recipientAddr);
-                    const result = await window.succus.debug.exploreChat(userAddress, recipientAddr);
-                    console.log("Risultato esplorazione:", result);
-                    
-                    if (result.messages && result.messages.length > 0) {
-                        alert(`Trovati ${result.messages.length} messaggi nella chat. Vedi console per dettagli.`);
-                    } else {
-                        alert("Nessun messaggio trovato per questa chat.");
-                    }
-                } else {
-                    alert("Inserisci prima un indirizzo destinatario valido");
-                }
-            }
-        });
-        
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-        
         // Quando un destinatario viene inserito, inizia ad ascoltare i messaggi
-        recipientAddressInput.addEventListener('change', () => {
-            const recipientAddress = recipientAddressInput.value.trim();
-            if (recipientAddress && userAddress && gunKeyPair) {
+        recipientAddressInput.addEventListener('input', (e) => {
+            const recipientAddress = e.target.value.trim();
+            
+            // Verifica che sia un indirizzo valido (comincia con 0x e ha la lunghezza giusta)
+            if (recipientAddress.startsWith('0x') && recipientAddress.length > 10) {
+                // Se l'utente è cambiato, inizia l'ascolto
                 startListeningToConversation(recipientAddress);
             }
         });
@@ -1295,8 +1032,12 @@
             }
         };
         
-        // Clear conversation button
-        document.getElementById('clearConversation').addEventListener('click', clearCurrentConversation);
+        // Evento per l'invio del messaggio con il tasto Enter
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
         
         // Aggiungiamo un gestore per salvare i messaggi quando l'utente lascia la pagina
         window.addEventListener('beforeunload', () => {
