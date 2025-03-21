@@ -1,4 +1,4 @@
-// Wrapper per rendere Succus utilizzabile in un browser
+// Wrapper per rendere Shogun-D3 utilizzabile in un browser
 // Basato sul codice originale da /src/index.ts
 
 // Definisci i peer Gun prima di inizializzare
@@ -39,8 +39,8 @@ const GUN_PEERS = [
     console.log(`Gun PUT operazione sincronizzata:`, at.put);
   });
   
-  // Creazione del namespace Succus basato su ShogunCore
-  window.succus = {
+  // Creazione del namespace Shogun-D3 basato su ShogunCore
+  window.d3 = {
     // Riferiimento a ShogunCore
     shogun: shogunInstance,
   
@@ -66,6 +66,9 @@ const GUN_PEERS = [
     gun: window.gun,
     SEA: window.SEA,
   
+    // Mappa per tenere traccia degli ascoltatori attivi
+    activeListeners: new Map(),
+  
     // Database configuration (dbConf)
     dbConf: {
       peers: GUN_PEERS,
@@ -73,6 +76,52 @@ const GUN_PEERS = [
       radisk: false,
       axe: false,
       multicast: false,
+    },
+    
+    // Debug utilities
+    debug: {
+      testGunConnection: async function() {
+        try {
+          const startTime = Date.now();
+          
+          // Test di connessione a Gun con un semplice ping
+          const result = await new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+              resolve({
+                success: false,
+                message: "Timeout durante il test di connessione"
+              });
+            }, 5000);
+            
+            // Tenta di leggere un dato da Gun
+            window.gun.get("connection_test").once((data) => {
+              clearTimeout(timeoutId);
+              resolve({
+                success: true
+              });
+            });
+          });
+          
+          const endTime = Date.now();
+          const latency = endTime - startTime;
+          
+          return {
+            ...result,
+            latency
+          };
+        } catch (error) {
+          return {
+            success: false,
+            message: error.message || "Errore durante il test di connessione"
+          };
+        }
+      },
+  
+      // Configurazione log level
+      setLogLevel: function(level) {
+        // Implementazione semplificata per gestire il livello di log
+        console.log(`Log level impostato a: ${level}`);
+      }
     },
   
     // NUOVA FUNZIONE: Connessione wallet tramite ShogunCore
@@ -603,9 +652,6 @@ const GUN_PEERS = [
       }
     },
   
-    // Variabile globale per tracciare gli ascolti attivi
-    activeListeners: new Map(),
-  
     /**
      * Interrompe l'ascolto dei messaggi per una conversazione specifica
      * @param {string} recipientAddress Indirizzo del destinatario della conversazione
@@ -622,15 +668,15 @@ const GUN_PEERS = [
         
         // Genera il namespace della conversazione
         const participants = [recipientAddr, userAddress].sort();
-        const chatNamespace = window.succus.HashNamespace(participants.join(""));
+        const chatNamespace = window.d3.HashNamespace(participants.join(""));
         
         // Se esiste un listener attivo per questo namespace, lo rimuoviamo
-        if (window.succus.activeListeners.has(chatNamespace)) {
-          const listenerInfo = window.succus.activeListeners.get(chatNamespace);
+        if (window.d3.activeListeners.has(chatNamespace)) {
+          const listenerInfo = window.d3.activeListeners.get(chatNamespace);
           if (listenerInfo && listenerInfo.cleanup) {
             // Interrompi l'ascolto chiamando la funzione di cleanup
             listenerInfo.cleanup();
-            window.succus.activeListeners.delete(chatNamespace);
+            window.d3.activeListeners.delete(chatNamespace);
             console.log(`Ascolto interrotto per namespace ${chatNamespace}`);
             return true;
           }
@@ -779,7 +825,7 @@ const GUN_PEERS = [
       };
       
       // Aggiungi il listener all'elenco degli attivi
-      window.succus.activeListeners.set(chatNamespace, { 
+      window.d3.activeListeners.set(chatNamespace, { 
         cleanup: cleanupListener
       });
       
@@ -1211,7 +1257,7 @@ const GUN_PEERS = [
         const msgLevelIndex = levels.indexOf(level);
   
         if (msgLevelIndex <= currentLevelIndex) {
-          const prefix = `[SUCCUS:${level.toUpperCase()}]`;
+          const prefix = `[SHOGUN-D3:${level.toUpperCase()}]`;
           console.log(prefix, ...args);
         }
       },
@@ -1226,7 +1272,7 @@ const GUN_PEERS = [
       // Disattiva completamente i log
       disableLogging: function () {
         this.logLevel = "none";
-        console.log("[SUCCUS:INFO] Logging disabled");
+        console.log("[SHOGUN-D3:INFO] Logging disabled");
         return "All logging disabled";
       },
   
@@ -1236,10 +1282,10 @@ const GUN_PEERS = [
           ["none", "error", "warn", "info", "debug", "verbose"].includes(level)
         ) {
           this.logLevel = level;
-          console.log(`[SUCCUS:INFO] Log level set to ${level}`);
+          console.log(`[SHOGUN-D3:INFO] Log level set to ${level}`);
           return `Logging level set to ${level.toUpperCase()}`;
         } else {
-          console.error(`[SUCCUS:ERROR] Invalid log level: ${level}`);
+          console.error(`[SHOGUN-D3:ERROR] Invalid log level: ${level}`);
           return `Invalid log level: ${level}. Valid options are: none, error, warn, info, debug, verbose`;
         }
       },
@@ -1296,7 +1342,7 @@ const GUN_PEERS = [
           return `Rimosso keypair per ${address} da Gun`;
         } else {
           // Recupera prima tutti gli indirizzi, poi rimuove i keypair
-          return succus.getAllRegisteredAddresses().then((addresses) => {
+          return d3.getAllRegisteredAddresses().then((addresses) => {
             for (const addr of addresses) {
               window.gun.get(`skeypair${addr}`).put(null);
             }
@@ -1305,80 +1351,13 @@ const GUN_PEERS = [
         }
       },
   
-      // Funzione per testare se Gun funziona correttamente
-      testGunConnection: function () {
-        return new Promise((resolve, reject) => {
-          const testData = { test: `value_${Date.now()}` };
-          const testId = `succus_test_${Date.now()}`;
-  
-          // Registriamo quando il test è iniziato
-          const startTime = Date.now();
-  
-          // Impostiamo un timeout
-          const timeoutId = setTimeout(() => {
-            resolve({
-              success: false,
-              error: "Timeout",
-              latency: 10000,
-              message: "La connessione a Gun è troppo lenta o non funzionante.",
-            });
-          }, 5000);
-  
-          try {
-            // Scrittura test
-            window.gun.get(testId).put(testData, (ack) => {
-              if (ack.err) {
-                clearTimeout(timeoutId);
-                resolve({
-                  success: false,
-                  error: ack.err,
-                  message: "Errore nella scrittura a Gun.",
-                });
-                return;
-              }
-  
-              // Lettura test
-              window.gun.get(testId).once((data) => {
-                clearTimeout(timeoutId);
-                const endTime = Date.now();
-                const latency = endTime - startTime;
-  
-                if (!data || !data.test) {
-                  resolve({
-                    success: false,
-                    error: "ReadFailed",
-                    latency,
-                    message: "Gun non ha restituito i dati di test.",
-                  });
-                  return;
-                }
-  
-                resolve({
-                  success: true,
-                  latency,
-                  testId,
-                  message: `Connessione Gun funzionante (latenza: ${latency}ms).`,
-                });
-              });
-            });
-          } catch (error) {
-            clearTimeout(timeoutId);
-            resolve({
-              success: false,
-              error: error.message,
-              message: "Eccezione durante il test Gun.",
-            });
-          }
-        });
-      },
-      
       // Versione ottimizzata e semplificata per esplorare una chat
       exploreChat: function (address1, address2) {
         const addr1 = address1.toLowerCase();
         const addr2 = address2.toLowerCase();
         const participants = [addr1, addr2].sort();
         const sortedParticipants = participants.join("");
-        const chatNamespace = window.succus.HashNamespace(sortedParticipants);
+        const chatNamespace = window.d3.HashNamespace(sortedParticipants);
   
         return new Promise((resolve) => {
           const messages = [];
@@ -1440,7 +1419,7 @@ const GUN_PEERS = [
   // Inizializza il debug e Gun automaticamente
   (function () {
     // Imposta il livello di log predefinito
-    window.succus.debug.setLogLevel("error"); // Cambiato da "info" a "error" per ridurre i log
+    window.d3.debug.setLogLevel("error"); // Cambiato da "info" a "error" per ridurre i log
   
     // Inizializza Gun se non è stato già fatto
     if (!window.gun) {
@@ -1461,7 +1440,7 @@ const GUN_PEERS = [
   
     // Memorizza l'indirizzo dell'utente corrente quando disponibile
     window.currentUserAddress = null;
-    window.succus
+    window.d3
       .getProvider()
       .then((provider) => {
         if (provider) {
@@ -1482,8 +1461,8 @@ const GUN_PEERS = [
   })();
   
   // Aggiorno la funzione receiveMessage per tracciare gli ascolti
-  const originalReceiveMessage = window.succus.receiveMessage;
-  window.succus.receiveMessage = async function(recipientAddress, callback) {
+  const originalReceiveMessage = window.d3.receiveMessage;
+  window.d3.receiveMessage = async function(recipientAddress, callback) {
     // Interrompi eventuali ascolti precedenti
     this.stopReceiveMessage(recipientAddress);
     
@@ -1495,10 +1474,10 @@ const GUN_PEERS = [
       const userAddress = window.currentUserAddress ? window.currentUserAddress.toLowerCase() : "";
       const recipientAddr = recipientAddress.toLowerCase();
       const participants = [recipientAddr, userAddress].sort();
-      const chatNamespace = window.succus.HashNamespace(participants.join(""));
+      const chatNamespace = window.d3.HashNamespace(participants.join(""));
       
       // Registra l'ascolto
-      window.succus.activeListeners.set(chatNamespace, {
+      window.d3.activeListeners.set(chatNamespace, {
         recipient: recipientAddress,
         cleanup: cleanupFn
       });
@@ -1506,4 +1485,56 @@ const GUN_PEERS = [
     
     return cleanupFn;
   };
+  
+  // Funzionalità di logging
+  function createLogger() {
+    let currentLogLevel = "error"; // Default a 'error'
+    const logLevels = {
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+      none: 4,
+    };
+
+    function log(level, ...args) {
+      if (
+        logLevels[level] === undefined ||
+        logLevels[level] < logLevels[currentLogLevel]
+      ) {
+        return;
+      }
+
+      const prefix = `[SHOGUN-D3:${level.toUpperCase()}]`;
+      if (level === "error") {
+        console.error(prefix, ...args);
+      } else if (level === "warn") {
+        console.warn(prefix, ...args);
+      } else {
+        console.log(prefix, ...args);
+      }
+    }
+
+    return {
+      debug: (...args) => log("debug", ...args),
+      info: (...args) => log("info", ...args),
+      warn: (...args) => log("warn", ...args),
+      error: (...args) => log("error", ...args),
+      setLogLevel: (level) => {
+        if (level === "none") {
+          currentLogLevel = "none";
+          console.log("[SHOGUN-D3:INFO] Logging disabled");
+          return;
+        }
+
+        if (logLevels[level] !== undefined) {
+          currentLogLevel = level;
+          console.log(`[SHOGUN-D3:INFO] Log level set to ${level}`);
+        } else {
+          console.error(`[SHOGUN-D3:ERROR] Invalid log level: ${level}`);
+        }
+      },
+      getLogLevel: () => currentLogLevel,
+    };
+  }
   

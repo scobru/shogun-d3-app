@@ -1,6 +1,6 @@
 ## Shogun-D3: Decentralized Messaging Library
 
-Shogun-D3 is a decentralized messaging library based on [Gun](https://gun.eco) and integrated with [ShogunCore](https://github.com/yourgithub/shogun-core). This documentation describes the functions available in the browser implementation (wrapper2.js).
+Shogun-D3 is a decentralized messaging library based on [Gun](https://gun.eco) and integrated with [ShogunCore](https://github.com/scobru/shogun-core). This documentation describes the functions available in the browser implementation (d3.js).
 
 ## Architecture
 
@@ -11,7 +11,7 @@ Users are identified by their Ethereum addresses, and messages are stored in uni
 ## Initialization
 
 ```js
-// The Shogun-D3 instance is globally available as window.Shogun-D3 after loading wrapper2.js
+// The Shogun-D3 instance is globally available as window.d3 after loading d3.js
 // You also need to include gun.js, sea.js, ethers.js, and shogun-core.js
 ```
 
@@ -35,7 +35,7 @@ Users are identified by their Ethereum addresses, and messages are stored in uni
 ## Message Management
 
 <dl>
-<dt><a href="#sendmessage">sendmessage(payload, to, gunKeypair)</a> ⇒ <code>Promise.&lt;Object&gt;</code></dt>
+<dt><a href="#sendMessage">sendMessage(payload, to, gunKeypair)</a> ⇒ <code>Promise.&lt;Object&gt;</code></dt>
 <dd><p>Sends an encrypted message to one or more recipients.</p>
 </dd>
 <dt><a href="#receiveMessage">receiveMessage(recipientAddress, callback)</a> ⇒ <code>Promise.&lt;Function&gt;</code></dt>
@@ -72,6 +72,9 @@ Users are identified by their Ethereum addresses, and messages are stored in uni
 <dt><a href="#HashNamespace">HashNamespace(string)</a> ⇒ <code>string</code></dt>
 <dd><p>Encodes a string in base64, used to generate namespaces for conversations.</p>
 </dd>
+<dt><a href="#createLogger">createLogger()</a> ⇒ <code>Object</code></dt>
+<dd><p>Creates a logger to track operations and errors.</p>
+</dd>
 <dt><a href="#dbConf">dbConf</a> ⇒ <code>Object</code></dt>
 <dd><p>Gun database configuration.</p>
 </dd>
@@ -86,7 +89,7 @@ Gets the Web3 provider (MetaMask) if available.
 
 **Example**
 ```js
-const provider = await Shogun-D3.getProvider();
+const provider = await window.d3.getProvider();
 if (provider) {
   const address = await provider.getSigner().getAddress();
   console.log("User address:", address);
@@ -108,7 +111,7 @@ Connects the user using MetaMask and authenticates with ShogunCore.
 **Example**
 ```js
 try {
-  const { address, keypair } = await Shogun-D3.connectWithMetaMask();
+  const { address, keypair } = await window.d3.connectWithMetaMask();
   console.log("User connected:", address);
 } catch (error) {
   console.error("Connection error:", error.message);
@@ -129,7 +132,7 @@ Backs up the user's cryptographic keys.
 **Example**
 ```js
 const password = "secure-password";
-const backupData = await Shogun-D3.backupKeypair(password);
+const backupData = await window.d3.backupKeypair(password);
 console.log("Backup data:", backupData);
 // Save backupData in a secure location
 ```
@@ -150,15 +153,15 @@ Restores the user's cryptographic keys from a backup.
 ```js
 const backupData = "..."; // Previously saved backup data
 const password = "secure-password";
-const success = await Shogun-D3.restoreKeypair(backupData, password);
+const success = await window.d3.restoreKeypair(backupData, password);
 if (success) {
   console.log("Keypair successfully restored");
 }
 ```
 
-<a name="sendmessage"></a>
+<a name="sendMessage"></a>
 
-## sendmessage(payload, to, gunKeypair) ⇒ <code>Promise.&lt;Object&gt;</code>
+## sendMessage(payload, to, gunKeypair) ⇒ <code>Promise.&lt;Object&gt;</code>
 Sends an encrypted message to one or more recipients.
 
 **Returns**: <code>Promise.&lt;Object&gt;</code> - Result of the operation.
@@ -182,7 +185,7 @@ Sends an encrypted message to one or more recipients.
 // Assuming the user is already connected and gunKeyPair is available
 const message = "Hello, this is a test message!";
 const recipient = "0x1234..."; // Recipient's Ethereum address
-const result = await Shogun-D3.sendmessage(message, [recipient], window.gunKeyPair);
+const result = await window.d3.sendMessage(message, [recipient], window.gunKeyPair);
 
 if (result.sent) {
   console.log("Message sent successfully!");
@@ -212,11 +215,15 @@ Starts listening for messages sent to/from a specific address.
   - `messageKey` <code>string</code>: Unique key of the message
   - `originalData` <code>Object</code>: Original message data from Gun
 
+**Notes**:
+- Duplicate messages are automatically filtered using a caching system
+- Messages older than 30 minutes are periodically removed from the cache
+
 **Example**
 ```js
 // Start listening for messages to/from the specified address
 const recipientAddress = "0x1234...";
-const cleanupFn = await Shogun-D3.receiveMessage(recipientAddress, (messageData) => {
+const cleanupFn = await window.d3.receiveMessage(recipientAddress, (messageData) => {
   const { decrypted, isSentByMe, timestamp, sender } = messageData;
   console.log(`New message from ${sender}: ${decrypted}`);
   console.log(`Sent by me: ${isSentByMe}`);
@@ -226,7 +233,7 @@ const cleanupFn = await Shogun-D3.receiveMessage(recipientAddress, (messageData)
 // To stop listening later:
 cleanupFn();
 // or:
-Shogun-D3.stopReceiveMessage(recipientAddress);
+window.d3.stopReceiveMessage(recipientAddress);
 ```
 
 <a name="stopReceiveMessage"></a>
@@ -243,7 +250,7 @@ Stops listening for messages for a specific address.
 **Example**
 ```js
 const recipientAddress = "0x1234...";
-const stopped = Shogun-D3.stopReceiveMessage(recipientAddress);
+const stopped = window.d3.stopReceiveMessage(recipientAddress);
 if (stopped) {
   console.log("Listening stopped successfully");
 } else {
@@ -263,13 +270,16 @@ Decrypts a received message.
 | messageData | <code>Object</code> | Message data from Gun |
 | gunKeypair | <code>Object</code> | Gun keypair of the current user |
 
+**Notes**:
+- The function handles different message formats, checking for encryptedMSG, text, message, content, and raw_payload fields
+
 **Example**
 ```js
 // This is generally used internally, but can be called manually
-gun.get(namespace).once(async (data, key) => {
+window.gun.get(namespace).once(async (data, key) => {
   if (key !== '_' && data.encryptedMSG) {
     try {
-      const decrypted = await Shogun-D3.decryptMessage(data, window.gunKeyPair);
+      const decrypted = await window.d3.decryptMessage(data, window.gunKeyPair);
       console.log("Decrypted message:", decrypted);
     } catch (error) {
       console.error("Error decrypting:", error);
@@ -292,10 +302,10 @@ Creates a shared secret between sender and recipient for message encryption.
 
 **Example**
 ```js
-// This is generally used internally by sendmessage
-const recipientPubKey = await Shogun-D3.getKeypair("0x1234...");
-const secret = await Shogun-D3.createSharedSecret(recipientPubKey, window.gunKeyPair);
-const encrypted = await Shogun-D3.encryptMessage("Secret message", secret);
+// This is generally used internally by sendMessage
+const recipientPubKey = await window.d3.getKeypair("0x1234...");
+const secret = await window.d3.createSharedSecret(recipientPubKey, window.gunKeyPair);
+const encrypted = await window.d3.encryptMessage("Secret message", secret);
 ```
 
 <a name="encryptMessage"></a>
@@ -334,7 +344,7 @@ Retrieves the public part of a user's keypair.
 **Example**
 ```js
 const recipientAddress = "0x1234...";
-const pubKeys = await Shogun-D3.getKeypair(recipientAddress);
+const pubKeys = await window.d3.getKeypair(recipientAddress);
 if (pubKeys && pubKeys.pub && pubKeys.epub) {
   console.log("User has valid public keys, can receive messages");
 } else {
@@ -358,7 +368,7 @@ Registers a user's public keys in the Gun database.
 ```js
 // This is automatically used by connectWithMetaMask
 // but can also be used manually
-await Shogun-D3.registerKeypair(address, {
+await window.d3.registerKeypair(address, {
   pub: gunKeyPair.pub,
   epub: gunKeyPair.epub
 });
@@ -381,7 +391,41 @@ Encodes a string in base64, used to generate namespaces for conversations.
 const userA = "0xabcd...".toLowerCase();
 const userB = "0x1234...".toLowerCase();
 const participants = [userA, userB].sort();
-const namespace = Shogun-D3.HashNamespace(participants.join(""));
+const namespace = window.d3.HashNamespace(participants.join(""));
+```
+
+<a name="createLogger"></a>
+
+## createLogger() ⇒ <code>Object</code>
+Creates a logger to track operations and errors.
+
+**Returns**: <code>Object</code> - Logger object with methods for different log levels.
+
+**Properties**:
+- `debug` <code>Function</code>: Logs debug messages
+- `info` <code>Function</code>: Logs informational messages
+- `warn` <code>Function</code>: Logs warnings
+- `error` <code>Function</code>: Logs errors
+- `setLogLevel` <code>Function</code>: Sets the log level (debug, info, warn, error, none)
+- `getLogLevel` <code>Function</code>: Gets the current log level
+
+**Example**
+```js
+// Create a logger
+const logger = createLogger();
+
+// Set the log level
+logger.setLogLevel("debug");
+
+// Use the logger
+logger.debug("Debug message");
+logger.info("Informational message");
+logger.warn("Warning");
+logger.error("Critical error");
+
+// Get the current log level
+const currentLevel = logger.getLogLevel();
+console.log(`Current log level: ${currentLevel}`);
 ```
 
 <a name="dbConf"></a>
@@ -399,8 +443,8 @@ Gun database configuration.
 **Example**
 ```js
 // Access the configuration
-console.log("Configured peers:", Shogun-D3.dbConf.peers);
+console.log("Configured peers:", window.d3.dbConf.peers);
 
 // Use the configuration to initialize a new Gun instance
-const customGun = new Gun(Shogun-D3.dbConf);
+const customGun = new Gun(window.d3.dbConf);
 ```

@@ -1,290 +1,534 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shogun-D3 Chat - Demo</title>
+    <title>Shogun-D3 Chat</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            /* Light theme */
+            --primary-color-light: #2D3436;
+            --secondary-color-light: #636E72;
+            --accent-color-light: #00B894;
+            --bg-color-light: #FFFFFF;
+            --light-gray-light: #F1F2F6;
+            --message-bg-light: #F8F9FA;
+            --shadow-light: rgba(0, 0, 0, 0.05);
+            
+            /* Dark theme */
+            --primary-color-dark: #FFFFFF;
+            --secondary-color-dark: #CBD5E0;
+            --accent-color-dark: #00D1A1;
+            --bg-color-dark: #1A202C;
+            --light-gray-dark: #2D3748;
+            --message-bg-dark: #2D3748;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+            
+            /* Common variables */
+            --border-radius: 12px;
+            --spacing: 12px;
+            --transition: all 0.2s ease;
+            
+            /* Default theme (light) */
+            --primary-color: var(--primary-color-light);
+            --secondary-color: var(--secondary-color-light);
+            --accent-color: var(--accent-color-light);
+            --bg-color: var(--bg-color-light);
+            --light-gray: var(--light-gray-light);
+            --message-bg: var(--message-bg-light);
+            --shadow: var(--shadow-light);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: var(--primary-color-dark);
+            --secondary-color: var(--secondary-color-dark);
+            --accent-color: var(--accent-color-dark);
+            --bg-color: var(--bg-color-dark);
+            --light-gray: var(--light-gray-dark);
+            --message-bg: var(--message-bg-dark);
+            --shadow: var(--shadow-dark);
+        }
+
+        * {
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.6;
+            transition: var(--transition);
+            min-height: 100vh;
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            height: 100vh;
+            padding: var(--spacing);
+            background-color: var(--bg-color);
         }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing);
+            padding-bottom: var(--spacing);
+            border-bottom: 1px solid var(--light-gray);
+        }
+
         h1 {
-            text-align: center;
-            color: #333;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
         }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--light-gray);
+        }
+
         .info {
-            background-color: #e9f7fe;
-            border: 1px solid #b3e5fc;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            background-color: var(--light-gray);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing);
+            font-size: 0.95rem;
         }
+
         .connect-section {
-            margin-bottom: 20px;
             text-align: center;
+            margin-bottom: var(--spacing);
+            padding: var(--spacing);
+            background-color: var(--light-gray);
+            border-radius: var(--border-radius);
         }
+
         button {
-            background-color: #4CAF50;
+            background-color: var(--accent-color);
             color: white;
             border: none;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            font-size: 14px;
-            margin: 5px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: var(--transition);
         }
+
         button:hover {
-            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
         }
+
+        button:active {
+            transform: translateY(0);
+        }
+
         button:disabled {
-            background-color: #cccccc;
+            background-color: var(--secondary-color);
             cursor: not-allowed;
+            opacity: 0.7;
         }
-        .wallet-info {
-            margin: 10px 0;
-            font-size: 14px;
-        }
+
         .chat-section {
             display: none;
-            margin-top: 20px;
         }
-        .messages {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            height: 300px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
-        }
-        .message {
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        .message.sent {
-            background-color: #e3f2fd;
-            margin-left: auto;
-            text-align: right;
-        }
-        .message.received {
-            background-color: #f1f1f1;
-        }
-        .message .meta {
-            font-size: 12px;
-            color: #777;
-            margin-top: 3px;
-        }
-        .input-area {
-            display: flex;
-            margin-top: 10px;
-        }
-        .input-area input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-right: 10px;
-        }
-        .recipient-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        
-        #chat-title {
-            text-align: center;
-            margin: 10px 0;
-            color: #333;
-            font-size: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .active {
-            color: green;
-            font-weight: bold;
-        }
-        
-        .warning {
-            color: orange;
-            font-weight: bold;
-        }
-        
-        .error {
-            color: red;
-            font-weight: bold;
-        }
-        
-        .custom-button {
-            background-color: #4C6FaF;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-            font-size: 13px;
-        }
-        
-        .conversations-list {
-            margin-top: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: #f5f5f5;
-        }
-        
-        .conversation-item {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        
-        .conversation-item:hover {
-            background-color: #e9e9e9;
-        }
-        
-        .conversation-item.active {
-            background-color: #e3f2fd;
-            font-weight: bold;
-        }
-        
-        .conversation-item .address {
-            font-size: 14px;
-            color: #333;
-        }
-        
-        .conversation-item .message-count {
-            font-size: 12px;
-            color: #777;
-        }
-        
+
         .chat-wrapper {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: var(--spacing);
+            height: calc(100vh - 200px);
+            background-color: var(--light-gray);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            margin-top: var(--spacing);
+        }
+
+        .conversations-list {
+            background-color: var(--bg-color);
+            border-radius: var(--border-radius);
+            overflow-y: auto;
+            padding: var(--spacing);
+            height: 100%;
+        }
+
+        .conversation-item {
+            padding: 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 6px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--light-gray);
+        }
+
+        .conversation-item:hover {
+            transform: translateX(2px);
+            border-color: var(--accent-color);
+        }
+
+        .conversation-item.active {
+            background-color: var(--accent-color);
+            color: white;
+            transform: translateX(2px);
+            border-color: transparent;
+        }
+
+        .conversation-item .address {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .conversation-item .message-count {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .conversation-item .last-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .messages {
+            height: 100%;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            background-color: var(--bg-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .messages-header {
+            padding: calc(var(--spacing) / 2);
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--light-gray);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .messages-container {
+            padding: calc(var(--spacing) / 2);
+            background-color: var(--bg-color);
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(100% - 110px);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: var(--border-radius);
+            word-wrap: break-word;
+            animation: fadeIn 0.2s ease;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .message.sent {
+            background-color: #008875;
+            color: #FFFFFF;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .message.received {
+            background-color: var(--message-bg);
+            color: var(--primary-color);
+            border-bottom-left-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .message .meta {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
         }
         
-        .chat-sidebar {
-            width: 30%;
+        .message.sent .meta {
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: none;
         }
-        
-        .chat-main {
-            width: 70%;
+
+        .input-area {
+            padding: var(--spacing);
+            background-color: var(--bg-color);
+            border-top: 1px solid var(--light-gray);
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            bottom: 0;
+            z-index: 1;
         }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
+
+        input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            transition: var(--transition);
         }
-        
-        .status-indicator.online {
-            background-color: #4CAF50;
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
         }
-        
-        .status-indicator.offline {
-            background-color: #f44336;
+
+        #recipientAddress {
+            font-family: monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
         }
-        
-        .status-indicator.connecting {
-            background-color: #ff9800;
-            animation: pulse 1.5s infinite;
-        }
-        
+
         .connection-status {
-            font-size: 12px;
-            margin-top: 10px;
-            padding: 5px;
-            border-radius: 3px;
-            background-color: #f5f5f5;
+            margin-top: var(--spacing);
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            background-color: var(--bg-color);
+            border: 1px solid var(--light-gray);
             display: inline-flex;
             align-items: center;
+            gap: 8px;
         }
-        
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online {
+            background-color: var(--accent-color);
+            box-shadow: 0 0 12px var(--accent-color);
+        }
+
+        .status-indicator.offline {
+            background-color: #FF6B6B;
+            box-shadow: 0 0 12px #FF6B6B;
+        }
+
+        .status-indicator.connecting {
+            background-color: #FFA502;
+            box-shadow: 0 0 12px #FFA502;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+            0% { opacity: 0.5; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .wallet-info {
+            background-color: var(--bg-color);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            margin-top: var(--spacing);
+            border: 1px solid var(--light-gray);
+            text-align: left;
+        }
+
+        .wallet-info code {
+            background-color: var(--light-gray);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .chat-wrapper {
+                grid-template-columns: 1fr;
+                height: calc(100vh - 160px);
+            }
+
+            .conversations-list {
+                display: none;
+            }
+
+            .container {
+                padding: calc(var(--spacing) / 2);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Shogun-D3 Chat Demo</h1>
+        <div class="header">
+            <h1>Shogun-D3</h1>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+        </div>
         
         <div class="info">
-            <p>Questa è una demo di chat decentralizzata utilizzando la libreria Shogun-D3. Per utilizzarla hai bisogno di:</p>
+            <p>To use this decentralized chat, you need:</p>
             <ul>
-                <li>Metamask installato nel browser</li>
-                <li>Un indirizzo Ethereum</li>
+                <li>Metamask installed in your browser</li>
+                <li>An Ethereum address</li>
             </ul>
         </div>
         
         <div id="wallet-section" class="connect-section">
-            <button id="connectWallet">Connetti Wallet</button>
-            <button id="refreshChat" style="background-color: #4682b4;">Ricarica Chat</button>
+            <button id="connectWallet">Connect Wallet</button>
+            <button id="refreshChat">Refresh Chat</button>
             <div id="walletInfo" class="wallet-info"></div>
             <div class="connection-status" id="gunStatus">
                 <span class="status-indicator connecting"></span>
-                <span>Connessione a Gun...</span>
+                <span>Connecting to Gun...</span>
             </div>
         </div>
         
         <div id="chatSection" class="chat-section">
             <div class="chat-wrapper">
-                <div class="chat-sidebar">
-                    <h3>Conversazioni</h3>
-                    <div class="conversations-list" id="conversationsList">
-                        <!-- Le conversazioni appariranno qui -->
-                    </div>
+                <div class="conversations-list" id="conversationsList">
+                    <!-- Conversations will appear here -->
                 </div>
-                <div class="chat-main">
-                    <input type="text" class="recipient-input" id="recipientAddress" placeholder="Indirizzo ETH del destinatario (0x...)">
-                    
-                    <h3 id="chat-title">Seleziona un destinatario per iniziare a chattare</h3>
-                    
-                    <div class="messages" id="messagesContainer">
-                        <!-- I messaggi appariranno qui -->
+                <div class="messages">
+                    <div class="messages-header">
+                        <input type="text" id="recipientAddress" placeholder="Recipient's ETH address (0x...)">
                     </div>
-                    
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will appear here -->
+                    </div>
                     <div class="input-area">
-                        <input type="text" id="messageInput" placeholder="Scrivi un messaggio...">
-                        <button id="sendMessage">Invia</button>
+                        <input type="text" id="messageInput" placeholder="Type a message...">
+                        <button id="sendMessage">Send</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Librerie necessarie -->
+    <!-- Required libraries -->
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
-    <script src="shogun-core.js" ></script>
+    <script src="shogun-core.js"></script>
     <script src="d3.js"></script>
     <script>
-        // Elementi DOM
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Set initial theme based on system preference
+        if (prefersDarkScheme.matches) {
+            document.body.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.body.removeAttribute('data-theme');
+                themeToggle.textContent = '🌙';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+            }
+        });
+
+        // Check if d3 and d3.debug exist, otherwise initialize
+        if (!window.d3) {
+            console.error("Error: d3 object not loaded correctly");
+            window.d3 = {};
+        }
+        
+        if (!window.d3.debug) {
+            console.warn("Warning: d3.debug object not found, initializing");
+            window.d3.debug = {};
+        }
+        
+        // Check if testGunConnection exists, otherwise create it
+        if (!window.d3.debug.testGunConnection) {
+            console.warn("Warning: testGunConnection function not found, creating");
+            window.d3.debug.testGunConnection = async function() {
+                try {
+                    const startTime = Date.now();
+                    
+                    // Test Gun connection with a simple ping
+                    const result = await new Promise((resolve) => {
+                        const timeoutId = setTimeout(() => {
+                            resolve({
+                                success: false,
+                                message: "Connection test timeout"
+                            });
+                        }, 5000);
+                        
+                        // Try to read data from Gun
+                        window.gun.get("connection_test").once((data) => {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                success: true
+                            });
+                        });
+                    });
+                    
+                    const endTime = Date.now();
+                    const latency = endTime - startTime;
+                    
+                    return {
+                        ...result,
+                        latency
+                    };
+                } catch (error) {
+                    return {
+                        success: false,
+                        message: error.message || "Error during connection test"
+                    };
+                }
+            };
+        }
+        
+        // DOM Elements
         const connectWalletBtn = document.getElementById('connectWallet');
         const walletInfoEl = document.getElementById('walletInfo');
         const chatSection = document.getElementById('chatSection');
@@ -292,52 +536,50 @@
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendMessageBtn = document.getElementById('sendMessage');
-        const keyPairStatusElement = document.createElement('div'); // Elemento per lo stato del keypair
+        const keyPairStatusElement = document.createElement('div');
         walletInfoEl.appendChild(keyPairStatusElement);
 
-        // Variabili globali
+        // Global variables
         let userAddress = null;
         let provider = null;
         let wallet = null;
         let gunKeyPair = null;
         let activeConversations = new Set();
-        let processedMessages = new Set(); // Per evitare messaggi duplicati
-        let chatMessages = {}; // Nuovo oggetto per memorizzare i messaggi per ogni conversazione
+        let processedMessages = new Set();
+        let chatMessages = {};
         
-        // Funzioni per persistenza dati in localStorage
+        // LocalStorage functions
         const saveMessagesToLocalStorage = () => {
             try {
                 localStorage.setItem('shogun_d3_chat_messages', JSON.stringify(chatMessages));
-                console.log('Messaggi salvati in localStorage');
+                console.log('Messages saved to localStorage');
             } catch (error) {
-                console.error('Errore nel salvare i messaggi in localStorage:', error);
+                console.error('Error saving messages to localStorage:', error);
             }
         };
         
         const loadMessagesFromLocalStorage = () => {
             try {
-                // Prova prima a caricare con il nuovo nome
                 let saved = localStorage.getItem('shogun_d3_chat_messages');
-                // Se non trova, prova con il vecchio nome per retrocompatibilità
                 if (!saved) {
                     saved = localStorage.getItem('succus_chat_messages');
                 }
                 
                 if (saved) {
                     chatMessages = JSON.parse(saved);
-                    console.log('Messaggi caricati da localStorage:', Object.keys(chatMessages).length, 'conversazioni trovate');
+                    console.log('Messages loaded from localStorage:', Object.keys(chatMessages).length, 'conversations found');
                     return true;
                 }
             } catch (error) {
-                console.error('Errore nel caricare i messaggi da localStorage:', error);
+                console.error('Error loading messages from localStorage:', error);
             }
             return false;
         };
         
-        // Carica i messaggi da localStorage all'avvio
+        // Load messages from localStorage on startup
         loadMessagesFromLocalStorage();
         
-        // Funzione per controllare lo stato di Gun
+        // Function to check Gun status
         const checkGunStatus = async () => {
             try {
                 const status = await window.d3.debug.testGunConnection();
@@ -346,95 +588,75 @@
                 if (status.success) {
                     statusElement.innerHTML = `
                         <span class="status-indicator online"></span>
-                        <span>Gun connesso (latenza: ${status.latency}ms)</span>
+                        <span>Gun connected (latency: ${status.latency}ms)</span>
                     `;
-                    console.log("Gun connesso con latenza:", status.latency);
                     return true;
                 } else {
                     statusElement.innerHTML = `
                         <span class="status-indicator offline"></span>
-                        <span>Gun disconnesso: ${status.message}</span>
+                        <span>Gun disconnected: ${status.message}</span>
                     `;
-                    console.error("Gun non connesso:", status.message);
                     return false;
                 }
             } catch (error) {
                 document.getElementById('gunStatus').innerHTML = `
                     <span class="status-indicator offline"></span>
-                    <span>Errore Gun: ${error.message}</span>
+                    <span>Gun error: ${error.message}</span>
                 `;
-                console.error("Errore nel controllo Gun:", error);
                 return false;
             }
         };
         
-        // Verifica lo stato di Gun ogni 10 secondi
+        // Check Gun status every 10 seconds
         setInterval(checkGunStatus, 10000);
-        
-        // Verifica iniziale
         checkGunStatus();
         
-        // Funzione per connettere il wallet
+        // Function to connect wallet
         const connectWallet = async () => {
             try {
-                // Usa il metodo connectWithMetaMask di Shogun-D3 che gestisce tutto il flusso di autenticazione
                 const result = await d3.connectWithMetaMask();
                 
                 if (!result || !result.address) {
-                    console.error("Errore nella connessione: risultato non valido", result);
+                    console.error("Connection error: invalid result", result);
                     return;
                 }
                 
                 userAddress = result.address;
                 gunKeyPair = result.keypair;
                 
-                // Memorizza globalmente
                 window.currentUserAddress = userAddress;
                 window.gunKeyPair = gunKeyPair;
                 
-                console.log("Wallet connesso con successo:", userAddress);
-                console.log("KeyPair ottenuto:", {
-                    pub: gunKeyPair.pub ? "presente" : "mancante",
-                    epub: gunKeyPair.epub ? "presente" : "mancante",
-                    priv: gunKeyPair.priv ? "presente" : "mancante", 
-                    epriv: gunKeyPair.epriv ? "presente" : "mancante"
-                });
-                
-                // Aggiorna UI
                 walletInfoEl.innerHTML = `
-                    <p>Wallet connesso!</p>
-                    <p>Indirizzo: <code>${userAddress}</code></p>
+                    <p>Wallet connected!</p>
+                    <p>Address: <code>${userAddress}</code></p>
                 `;
                 
-                keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair attivo</span>`;
+                keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair active</span>`;
                 
-                // Abilita chat
                 chatSection.style.display = 'block';
             } catch (error) {
-                console.error("Errore durante la connessione al wallet:", error);
-                alert("Errore durante la connessione al wallet. Controlla la console per i dettagli.");
+                console.error("Error connecting to wallet:", error);
+                alert("Error connecting to wallet. Check console for details.");
             }
         };
         
-        // Funzione per aggiornare la lista delle conversazioni
+        // Function to update conversations list
         const updateConversationsList = () => {
             const conversationsList = document.getElementById('conversationsList');
             conversationsList.innerHTML = '';
             
             const currentRecipient = recipientAddressInput.value.trim();
-            
-            // Ottieni tutte le conversazioni
             const conversations = Object.keys(chatMessages);
             
             if (conversations.length === 0) {
                 const emptyItem = document.createElement('div');
                 emptyItem.className = 'conversation-item';
-                emptyItem.innerHTML = '<div class="address">Nessuna conversazione</div>';
+                emptyItem.innerHTML = '<div class="address">No conversations yet</div>';
                 conversationsList.appendChild(emptyItem);
                 return;
             }
             
-            // Ordina per data dell'ultimo messaggio (più recente prima)
             conversations.sort((a, b) => {
                 const lastMsgA = chatMessages[a].length > 0 ? 
                     chatMessages[a][chatMessages[a].length - 1].timestamp : 0;
@@ -443,7 +665,6 @@
                 return lastMsgB - lastMsgA;
             });
             
-            // Crea un elemento per ogni conversazione
             conversations.forEach(address => {
                 const item = document.createElement('div');
                 item.className = 'conversation-item';
@@ -459,7 +680,7 @@
                 
                 item.innerHTML = `
                     <div class="address">${address.slice(0, 6)}...${address.slice(-4)}</div>
-                    <div class="message-count">${messageCount} messaggi</div>
+                    <div class="message-count">${messageCount} messages</div>
                     <div class="last-message">${lastMessagePreview}</div>
                 `;
                 
@@ -467,7 +688,6 @@
                     recipientAddressInput.value = address;
                     startListeningToConversation(address);
                     
-                    // Aggiorna lo stato attivo
                     document.querySelectorAll('.conversation-item').forEach(el => {
                         el.classList.remove('active');
                     });
@@ -478,77 +698,54 @@
             });
         };
         
-        // Funzione per inviare un messaggio utilizzando direttamente d3.sendmessage
+        // Function to send a message
         const sendMessage = async () => {
             const message = messageInput.value.trim();
             const recipientAddress = recipientAddressInput.value.trim();
             
             if (!message || !recipientAddress) {
-                alert("Per favore inserisci sia un messaggio che un indirizzo destinatario.");
+                alert("Please enter both a message and a recipient address.");
                 return;
             }
             
             try {
-                // Aggiungi un messaggio di attesa
                 const loadingMsg = document.createElement('div');
                 loadingMsg.classList.add('message', 'sent');
-                loadingMsg.innerHTML = `Invio in corso...`;
+                loadingMsg.innerHTML = `Sending...`;
                 messagesContainer.appendChild(loadingMsg);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 
-                // Verifica che il destinatario abbia registrato una chiave pubblica
-                console.log(`Verifica keypair per destinatario ${recipientAddress}`);
+                console.log(`Verifying keypair for recipient ${recipientAddress}`);
                 const recipientPubKey = await d3.getKeypair(recipientAddress);
                 
                 if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
-                    // Rimuovi il messaggio di caricamento
                     messagesContainer.removeChild(loadingMsg);
                     
-                    console.error(`Keypair non valido per il destinatario ${recipientAddress}:`, recipientPubKey);
-                    
-                    // Prova ad auto-generare una chiave pubblica per test (solo in ambiente demo)
-                    if (confirm(`Il destinatario ${recipientAddress} non ha un keypair valido. Vuoi generare una chiave pubblica per questo utente (solo per test)?`)) {
+                    if (confirm(`Recipient ${recipientAddress} doesn't have a valid keypair. Generate a public key for testing?`)) {
                         const tempKeyPair = await d3.SEA.pair();
                         const publicPart = {
                             pub: tempKeyPair.pub,
                             epub: tempKeyPair.epub
                         };
                         
-                        // Registra la parte pubblica in Gun
                         await d3.registerKeypair(recipientAddress, publicPart);
                         
-                        console.log(`Keypair pubblico generato e salvato per ${recipientAddress}:`, publicPart);
-                        alert(`Keypair pubblico generato per ${recipientAddress}. Riprova a inviare il messaggio.`);
+                        alert(`Public keypair generated for ${recipientAddress}. Try sending the message again.`);
                         return;
                     }
                     
-                    alert(`Il destinatario ${recipientAddress} non ha un keypair valido. Non può ricevere messaggi.`);
+                    alert(`Recipient ${recipientAddress} doesn't have a valid keypair. They cannot receive messages.`);
                     return;
                 }
                 
-                console.log(`Keypair valido trovato per ${recipientAddress}, procedo con l'invio`);
-                console.log(`Chiavi pubbliche del destinatario:`, {
-                    pub: recipientPubKey.pub ? recipientPubKey.pub.substring(0, 15) + "..." : "mancante",
-                    epub: recipientPubKey.epub ? recipientPubKey.epub.substring(0, 15) + "..." : "mancante"
-                });
-                
-                // Invia il messaggio usando la libreria Shogun-D3
                 const result = await d3.sendmessage(message, [recipientAddress], gunKeyPair);
                 
-                // Rimuovi il messaggio di caricamento
                 messagesContainer.removeChild(loadingMsg);
                 
                 if (result.sent) {
-                    console.log(`Messaggio inviato con successo a ${recipientAddress}:`, message);
-                    console.log("Dettagli risultato:", result);
-                    
-                    // Pulisci l'input del messaggio
                     messageInput.value = '';
                     
-                    // Genera un ID univoco per il messaggio
                     const uniqueId = `sent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-                    
-                    // Aggiungi il messaggio all'interfaccia
                     const messageTime = new Date();
                     const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
                     
@@ -559,19 +756,17 @@
                         ${message}
                         <div class="meta">
                             ${timeString}
-                            <span class="message-sender">Tu</span>
+                            <span class="message-sender">You</span>
                         </div>
                     `;
                     
                     messagesContainer.appendChild(messageElement);
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     
-                    // Inizializza l'array dei messaggi per questa conversazione se non esiste già
                     if (!chatMessages[recipientAddress]) {
                         chatMessages[recipientAddress] = [];
                     }
                     
-                    // Salva il messaggio nell'array dei messaggi di questa conversazione
                     const messageToSave = {
                         decrypted: message,
                         isSentByMe: true,
@@ -580,78 +775,55 @@
                         messageKey: uniqueId
                     };
                     chatMessages[recipientAddress].push(messageToSave);
-                    console.log(`Messaggio inviato salvato in memoria per la conversazione con ${recipientAddress}`);
                     
-                    // Salva i messaggi aggiornati in localStorage
                     saveMessagesToLocalStorage();
-                    
-                    // Aggiorna la lista delle conversazioni
                     updateConversationsList();
-                    
-                    // Inizia ad ascoltare i messaggi se non lo stai già facendo
                     startListeningToConversation(recipientAddress);
                 } else {
-                    console.error(`Errore nell'invio del messaggio:`, result.why);
-                    alert("Errore durante l'invio del messaggio: " + (result.why ? result.why.message || result.why : "Errore sconosciuto"));
+                    alert("Error sending message: " + (result.why ? result.why.message || result.why : "Unknown error"));
                 }
                 
             } catch (error) {
-                console.error("Errore durante l'invio del messaggio:", error);
-                alert("Errore durante l'invio del messaggio: " + error.message);
+                console.error("Error sending message:", error);
+                alert("Error sending message: " + error.message);
             }
         };
         
-        // Funzione per iniziare ad ascoltare una conversazione
+        // Function to start listening to a conversation
         const startListeningToConversation = async (recipientAddress) => {
             if (!recipientAddress || !userAddress) {
-                console.warn("Impossibile iniziare ad ascoltare: indirizzo del destinatario o mittente mancante");
+                console.warn("Cannot start listening: missing recipient or sender address");
                 return;
             }
             
-            // Verifica l'input
             const recipientAddr = recipientAddress.trim();
             if (!recipientAddr.startsWith('0x')) {
-                console.warn("Indirizzo destinatario non valido:", recipientAddr);
-                alert("Inserisci un indirizzo Ethereum valido che inizi con 0x");
+                alert("Please enter a valid Ethereum address starting with 0x");
                 return;
             }
             
-            console.log(`Inizio ascolto conversazione con ${recipientAddr}`);
-            
-            // Interrompi ogni precedente ascolto per evitare callback multipli
             window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
             
-            // Eseguiamo un'analisi iniziale del namespace
             const normalizedRecipient = userAddress.toLowerCase();
             const normalizedSender = recipientAddr.toLowerCase();
             const participants = [normalizedSender, normalizedRecipient].sort();
             const sortedParticipants = participants.join("");
             const chatNamespace = window.d3.HashNamespace(sortedParticipants);
             
-            console.log(`Ascolto namespace: ${chatNamespace}`);
-            
-            // Inizializza l'array dei messaggi per questa conversazione se non esiste già
             if (!chatMessages[recipientAddr]) {
                 chatMessages[recipientAddr] = [];
             }
             
-            // Pulisci l'interfaccia
             messagesContainer.innerHTML = '';
-            
-            // Tracciamo tutti i messaggi già conosciuti per evitare duplicati
             const knownMessageIds = new Set();
             
-            // Carica i messaggi salvati per questa conversazione
-            console.log(`Carico ${chatMessages[recipientAddr].length} messaggi salvati per la conversazione con ${recipientAddr}`);
             chatMessages[recipientAddr].forEach(messageData => {
                 const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
                 
-                // Aggiungi l'ID al set di messaggi conosciuti
                 if (messageKey) {
                     knownMessageIds.add(messageKey);
                 }
                 
-                // Formatta e visualizza il messaggio
                 const messageTime = new Date(timestamp);
                 const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
                 
@@ -662,65 +834,42 @@
                     ${decrypted}
                     <div class="meta">
                         ${timeString}
-                        <span class="message-sender">${isSentByMe ? 'Tu' : sender.slice(0, 6) + '...'}</span>
+                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
                     </div>
                 `;
                 
                 messagesContainer.appendChild(messageElement);
             });
             
-            // Scorrimento automatico verso il basso dopo aver caricato i messaggi
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // Imposta il titolo della chat
-            document.getElementById('chat-title').textContent = `Chat con ${recipientAddr.slice(0, 6)}...${recipientAddr.slice(-4)}`;
-            
-            // Utilizziamo un set per tracciare i messaggi già visualizzati
             const displayedMessages = new Set(knownMessageIds);
             
-            // Utilizziamo la nuova versione di receiveMessage
             window.d3.receiveMessage(recipientAddr, (messageData) => {
-                // Ignora log verbosi
-                // console.log("Messaggio ricevuto dal callback:", messageData);
-                
                 const { decrypted, isSentByMe, timestamp, sender, messageKey, originalData } = messageData;
                 
                 if (!decrypted) {
-                    console.warn("Messaggio non decifrabile:", messageData);
                     return;
                 }
                 
-                // Creiamo un ID univoco per il messaggio
                 const uniqueId = messageKey || `msg_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
                 
-                // Verifica se il messaggio è già stato visualizzato o è un messaggio inviato da noi
-                // I messaggi inviati da noi vengono già visualizzati dalla funzione sendMessage
                 if (displayedMessages.has(uniqueId) || (isSentByMe && sender === userAddress)) {
-                    console.log(`Messaggio ${uniqueId} già visualizzato o inviato da noi, ignorato`);
                     return;
                 }
                 
-                // Verifica se il messaggio è già presente nel DOM
                 const existingMsg = document.querySelector(`.message[data-msg-id="${uniqueId}"]`);
                 if (existingMsg) {
-                    console.log(`Messaggio ${uniqueId} già nel DOM, ignorato`);
                     displayedMessages.add(uniqueId);
                     return;
                 }
                 
-                console.log(`Visualizzazione nuovo messaggio ricevuto: ${decrypted.substring(0, 30)}...`);
-                
-                // Salva il messaggio nell'array dei messaggi di questa conversazione
                 const messageToSave = { decrypted, isSentByMe, timestamp, sender, messageKey: uniqueId };
                 chatMessages[recipientAddr].push(messageToSave);
                 
-                // Salva i messaggi aggiornati in localStorage
                 saveMessagesToLocalStorage();
-                
-                // Aggiorna la lista delle conversazioni
                 updateConversationsList();
                 
-                // Formatta e visualizza il messaggio
                 const messageTime = new Date(timestamp);
                 const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
                 
@@ -731,326 +880,63 @@
                     ${decrypted}
                     <div class="meta">
                         ${timeString}
-                        <span class="message-sender">${isSentByMe ? 'Tu' : sender.slice(0, 6) + '...'}</span>
+                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
                     </div>
                 `;
                 
                 messagesContainer.appendChild(messageElement);
                 displayedMessages.add(uniqueId);
                 
-                // Scorrimento automatico verso il basso
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
-        };
-        
-        // Funzione per visualizzare un messaggio nell'interfaccia
-        const displayMessage = (message, isSent, timestamp, msgId = null) => {
-            // Genera un id per il messaggio se non è fornito
-            const messageId = msgId || `${message}-${timestamp.getTime()}-${isSent ? 'sent' : 'received'}`;
-            
-            // Controlla che il messaggio non sia già visualizzato
-            if (document.querySelector(`.message[data-id="${messageId}"]`) || 
-                (msgId && document.querySelector(`.message[data-msg-id="${msgId}"]`))) {
-                return; // Il messaggio è già visualizzato
-            }
-            
-            const messageEl = document.createElement('div');
-            messageEl.classList.add('message');
-            messageEl.classList.add(isSent ? 'sent' : 'received');
-            messageEl.setAttribute('data-id', messageId);
-            if (msgId) {
-                messageEl.setAttribute('data-msg-id', msgId);
-            }
-            
-            messageEl.innerHTML = `
-                ${message}
-                <div class="meta">${formatDate(timestamp)}</div>
-            `;
-            
-            messagesContainer.appendChild(messageEl);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        };
-        
-        // Funzione per formattare la data
-        const formatDate = (date) => {
-            return date.toLocaleTimeString() + ' ' + date.toLocaleDateString();
         };
         
         // Event listeners
         connectWalletBtn.addEventListener('click', connectWallet);
         sendMessageBtn.addEventListener('click', sendMessage);
         
-        // Quando un destinatario viene inserito, inizia ad ascoltare i messaggi
         recipientAddressInput.addEventListener('input', (e) => {
             const recipientAddress = e.target.value.trim();
-            
-            // Verifica che sia un indirizzo valido (comincia con 0x e ha la lunghezza giusta)
             if (recipientAddress.startsWith('0x') && recipientAddress.length > 10) {
-                // Se l'utente è cambiato, inizia l'ascolto
                 startListeningToConversation(recipientAddress);
             }
         });
         
-        // Refresh chat button
         document.getElementById('refreshChat').addEventListener('click', async () => {
             const recipientAddr = recipientAddressInput.value.trim();
             if (!recipientAddr || !recipientAddr.startsWith('0x')) {
-                alert("Inserisci prima un indirizzo destinatario valido");
+                alert("Please enter a valid recipient address first");
                 return;
             }
             
-            // Pulisci i messaggi visualizzati
             messagesContainer.innerHTML = '';
             
-            // Aggiungiamo un messaggio di caricamento
             const loadingMessage = document.createElement('div');
             loadingMessage.className = 'message';
             loadingMessage.style.textAlign = 'center';
             loadingMessage.style.color = '#888';
-            loadingMessage.innerText = 'Caricamento messaggi in corso...';
+            loadingMessage.innerText = 'Loading messages...';
             messagesContainer.appendChild(loadingMessage);
             
-            // Usa la nuova funzione per leggere e mostrare direttamente i messaggi
             try {
                 await exploreAndDisplayChatMessages(recipientAddr);
-                console.log("Chat ricaricata per", recipientAddr);
-                
-                // Rimuoviamo il messaggio di caricamento
                 messagesContainer.removeChild(loadingMessage);
             } catch (error) {
-                console.error("Errore nella ricarica chat:", error);
-                
-                // Cambiamo il messaggio di caricamento in messaggio di errore
                 loadingMessage.style.color = 'red';
-                loadingMessage.innerText = `Errore nel caricamento: ${error.message}`;
+                loadingMessage.innerText = `Loading error: ${error.message}`;
             }
         });
         
-        // Funzione che recupera e mostra i messaggi direttamente da Gun
-        async function exploreAndDisplayChatMessages(recipientAddr) {
-            console.log("Recupero diretto messaggi per chat con:", recipientAddr);
-            
-            if (!userAddress || !window.gunKeyPair) {
-                console.error("Keypair o indirizzo utente non disponibili");
-                return;
-            }
-            
-            // Genera il namespace della chat
-            const normalizedRecipient = userAddress.toLowerCase();
-            const normalizedSender = recipientAddr.toLowerCase();
-            const participants = [normalizedSender, normalizedRecipient].sort();
-            const sortedParticipants = participants.join("");
-            const chatNamespace = window.d3.HashNamespace(sortedParticipants);
-            
-            console.log("Namespace della chat:", chatNamespace);
-            console.log("Participants array:", participants);
-            console.log("Sorted participants string:", sortedParticipants);
-            
-            // Verifica diretta del namespace
-            window.gun.get(chatNamespace).once((data) => {
-                if (!data) {
-                    console.warn(`Namespace ${chatNamespace} non trovato o vuoto`);
-                } else {
-                    console.log(`Namespace ${chatNamespace} trovato:`, data);
-                    
-                    // Conta manualmente i messaggi
-                    let count = 0;
-                    for (let key in data) {
-                        if (key !== '_' && key !== '#') {
-                            count++;
-                            console.log(`- Chiave ${key} trovata`);
-                        }
-                    }
-                    console.log(`Trovate ${count} chiavi nel namespace`);
-                }
-            });
-            
-            // Crea lo shared secret per decifrare i messaggi
-            const sharedSecret = await window.d3.createSharedSecret(recipientAddr, window.gunKeyPair);
-            console.log("Shared secret creato per lettura diretta");
-            
-            // Inizializza l'array dei messaggi per questa conversazione se non esiste già
-            if (!chatMessages[recipientAddr]) {
-                chatMessages[recipientAddr] = [];
-            }
-            
-            // Ottieni tutti i messaggi da questo namespace
-            return new Promise((resolve) => {
-                console.log("Lettura diretta di tutti i messaggi in:", chatNamespace);
-                
-                // Pulizia messaggi visualizzati
-                messagesContainer.innerHTML = '';
-                
-                let messageCount = 0;
-                let displayedCount = 0;
-                
-                window.gun.get(chatNamespace).map().once(async (data, key) => {
-                    try {
-                        // Ignora la chiave speciale "_" di Gun
-                        if (key === '_' || !data || !data.encryptedMSG) {
-                            return;
-                        }
-                        
-                        messageCount++;
-                        console.log(`Trovato messaggio [${key}]:`, {
-                            from: data.from && data.from.substring(0, 10) + "...",
-                            to: data.to && data.to.substring(0, 10) + "...",
-                            date: new Date(data.date).toLocaleString()
-                        });
-                        
-                        try {
-                            // Decodifica direttamente il messaggio
-                            const decrypted = await window.d3.decryptMessage(data, window.gunKeyPair);
-                            
-                            // Prepara i dati per la visualizzazione
-                            const timestamp = data.date || Date.now();
-                            const messageTime = new Date(timestamp);
-                            const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
-                            
-                            // Determina se il messaggio è stato inviato da noi
-                            const isSentByMe = (data.from && data.from.toLowerCase() === normalizedRecipient);
-                            
-                            // Crea un ID univoco per il messaggio per evitare duplicati
-                            const uniqueId = `${key}_${timestamp}`;
-                            
-                            // Verifica se questo messaggio è già stato salvato in memoria
-                            const existingMessageIndex = chatMessages[recipientAddr].findIndex(m => m.messageKey === uniqueId);
-                            
-                            if (existingMessageIndex === -1) {
-                                // Se non esiste già, salva il messaggio nell'array dei messaggi di questa conversazione
-                                const messageToSave = {
-                                    decrypted,
-                                    isSentByMe,
-                                    timestamp,
-                                    sender: isSentByMe ? userAddress : data.from,
-                                    messageKey: uniqueId
-                                };
-                                chatMessages[recipientAddr].push(messageToSave);
-                            }
-                            
-                            // Verifica se questo messaggio è già visualizzato
-                            if (document.querySelector(`.message[data-msg-id="${uniqueId}"]`)) {
-                                console.log(`Messaggio ${uniqueId} già visualizzato`);
-                                return;
-                            }
-                            
-                            console.log(`Visualizzazione diretta messaggio: ${decrypted}`);
-                            
-                            // Crea elemento messaggio
-                            const messageElement = document.createElement('div');
-                            messageElement.className = isSentByMe ? 'message sent' : 'message received';
-                            messageElement.setAttribute('data-msg-id', uniqueId);
-                            messageElement.innerHTML = `
-                                ${decrypted}
-                                <div class="meta">
-                                    ${timeString}
-                                    <span class="message-sender">${isSentByMe ? 'Tu' : data.from.slice(0, 6) + '...'}</span>
-                                </div>
-                            `;
-                            
-                            messagesContainer.appendChild(messageElement);
-                            displayedCount++;
-                            
-                            // Scorrimento automatico verso il basso
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        } catch (decodingError) {
-                            console.error("Errore decodifica messaggio:", decodingError);
-                        }
-                    } catch (error) {
-                        console.error("Errore nel processare messaggio:", error);
-                    }
-                });
-                
-                // Completa l'operazione dopo un breve timeout
-                setTimeout(() => {
-                    console.log(`Recupero completato: trovati ${messageCount} messaggi, visualizzati ${displayedCount}`);
-                    
-                    // Ordina i messaggi cronologicamente
-                    chatMessages[recipientAddr].sort((a, b) => a.timestamp - b.timestamp);
-                    
-                    // Salva i messaggi aggiornati in localStorage
-                    saveMessagesToLocalStorage();
-                    
-                    // Aggiorna la lista delle conversazioni
-                    updateConversationsList();
-                    
-                    // Se non ci sono messaggi trovati, proviamo un ascolto alternativo
-                    if (messageCount === 0) {
-                        console.log("Nessun messaggio trovato, provo con ascolto diretto di gun map");
-                        
-                        window.gun.get(chatNamespace).map().on(async (data, key) => {
-                            console.log(`Ascolto alternativo - evento per chiave ${key}:`, data);
-                            if (key === '_' || !data || !data.encryptedMSG) return;
-                            
-                            try {
-                                // Tenta di decifrare il messaggio con diverse strategie
-                                const decrypted = await window.d3.decryptMessage(data, window.gunKeyPair);
-                                console.log(`Messaggio decifrato con ascolto alternativo: ${decrypted}`);
-                                
-                                // Processa il messaggio qui...
-                                console.log("Messaggio rilevato con ascolto alternativo:", {
-                                    decrypted,
-                                    from: data.from,
-                                    to: data.to,
-                                    date: new Date(data.date).toLocaleString()
-                                });
-                            } catch (e) {
-                                console.error("Errore nella decifratura alternativa:", e);
-                            }
-                        });
-                        
-                        const emptyMessage = document.createElement('div');
-                        emptyMessage.className = 'message';
-                        emptyMessage.style.textAlign = 'center';
-                        emptyMessage.style.color = '#888';
-                        emptyMessage.innerText = 'Nessun messaggio trovato. Inizia una conversazione!';
-                        messagesContainer.appendChild(emptyMessage);
-                    }
-                    
-                    resolve({messageCount, displayedCount});
-                }, 3000);
-            });
-        }
-        
-        // Funzione per forzare l'aggiornamento dei messaggi
-        const forceMessageUpdate = async (recipientAddr) => {
-            if (!recipientAddr || !userAddress || !gunKeyPair) {
-                console.error("Impossibile aggiornare i messaggi: dati mancanti");
-                return;
-            }
-            
-            console.log("Forzo aggiornamento messaggi per", recipientAddr);
-            
-            try {
-                // Pulisci i messaggi visualizzati
-                messagesContainer.innerHTML = '';
-                
-                // Prova prima l'approccio diretto di lettura
-                await exploreAndDisplayChatMessages(recipientAddr);
-                
-                // Se necessario, riavvia anche l'ascolto normale
-                console.log("Riavvio ascolto normale dopo lettura diretta");
-                startListeningToConversation(recipientAddr);
-            } catch (error) {
-                console.error("Errore durante l'aggiornamento forzato:", error);
-                // Fallback al metodo normale
-                startListeningToConversation(recipientAddr);
-            }
-        };
-        
-        // Evento per l'invio del messaggio con il tasto Enter
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
         
-        // Aggiungiamo un gestore per salvare i messaggi quando l'utente lascia la pagina
         window.addEventListener('beforeunload', () => {
             saveMessagesToLocalStorage();
         });
         
-        // Aggiorna la lista delle conversazioni all'avvio
         window.addEventListener('DOMContentLoaded', () => {
             if (Object.keys(chatMessages).length > 0) {
                 updateConversationsList();
