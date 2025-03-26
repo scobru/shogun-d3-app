@@ -76,30 +76,41 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing);
-            padding-bottom: var(--spacing);
+            margin-bottom: calc(var(--spacing) * 1.5);
+            padding: calc(var(--spacing) * 1.2) 0;
             border-bottom: 1px solid var(--light-gray);
+            position: relative;
         }
 
         h1 {
             font-size: 1.75rem;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--primary-color);
             margin: 0;
+            letter-spacing: 0.5px;
         }
 
         .theme-toggle {
-            background: none;
+            background: var(--light-gray);
             border: none;
             color: var(--primary-color);
             cursor: pointer;
-            padding: 8px;
+            padding: 10px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
             transition: var(--transition);
+            box-shadow: 0 2px 4px var(--shadow);
         }
 
         .theme-toggle:hover {
-            background-color: var(--light-gray);
+            background-color: var(--accent-color);
+            color: white;
+            transform: translateY(-2px);
         }
 
         .info {
@@ -108,26 +119,34 @@
             border-radius: var(--border-radius);
             margin-bottom: var(--spacing);
             font-size: 0.95rem;
+            border-left: 3px solid var(--accent-color);
         }
 
         .connect-section {
             text-align: center;
             margin-bottom: var(--spacing);
-            padding: var(--spacing);
+            padding: calc(var(--spacing) * 1.5);
             background-color: var(--light-gray);
             border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
         }
 
         button {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: var(--border-radius);
             cursor: pointer;
             font-size: 0.95rem;
             font-weight: 500;
             transition: var(--transition);
+            min-width: 150px;
+            box-shadow: 0 2px 4px var(--shadow);
         }
 
         button:hover {
@@ -309,18 +328,21 @@
 
         .connection-status {
             margin-top: var(--spacing);
-            padding: 8px 12px;
-            border-radius: var(--border-radius);
+            padding: 10px 16px;
+            border-radius: 30px;
             background-color: var(--bg-color);
             border: 1px solid var(--light-gray);
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 2px 4px var(--shadow);
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
 
@@ -358,13 +380,26 @@
             margin-top: var(--spacing);
             border: 1px solid var(--light-gray);
             text-align: left;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .wallet-info p {
+            margin-bottom: 8px;
         }
 
         .wallet-info code {
             background-color: var(--light-gray);
-            padding: 2px 6px;
+            padding: 4px 8px;
             border-radius: 4px;
             font-family: monospace;
+            word-break: break-all;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .wallet-info .active {
+            color: var(--accent-color);
+            font-weight: 500;
         }
 
         /* Custom scrollbar */
@@ -628,8 +663,11 @@
                 window.gunKeyPair = gunKeyPair;
                 
                 walletInfoEl.innerHTML = `
-                    <p>Wallet connected!</p>
-                    <p>Address: <code>${userAddress}</code></p>
+                    <div style="margin-bottom: 12px; font-weight: 600; color: var(--accent-color);">Wallet connected!</div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="margin-right: 8px;">Address:</span>
+                        <code style="background-color: var(--light-gray); padding: 6px 10px; border-radius: 6px; word-break: break-all;">${userAddress}</code>
+                    </div>
                 `;
                 
                 keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair active</span>`;
@@ -698,6 +736,177 @@
             });
         };
         
+        // Function to start listening to a conversation
+        const startListeningToConversation = async (recipientAddress) => {
+            if (!recipientAddress || !userAddress) {
+                console.warn("Cannot start listening: missing recipient or sender address");
+                return;
+            }
+            
+            const recipientAddr = recipientAddress.trim();
+            if (!recipientAddr.startsWith('0x')) {
+                alert("Please enter a valid Ethereum address starting with 0x");
+                return;
+            }
+            
+            // Verifica se c'è già un listener attivo per questo indirizzo
+            if (window.d3.activeListeners && window.d3.activeListeners.has(recipientAddr)) {
+                console.log(`Listener già attivo per ${recipientAddr}, non ne creo un altro`);
+                // Aggiorniamo solo la visualizzazione dei messaggi
+                renderConversation(recipientAddr);
+                return;
+            }
+            
+            // Prima ferma eventuali listener precedenti
+            window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
+            
+            // Inizializza o carica la conversazione
+            renderConversation(recipientAddr);
+            
+            // Avvia il nuovo listener
+            window.d3.receiveMessage(recipientAddr, (messageData) => {
+                processIncomingMessage(recipientAddr, messageData);
+            });
+        };
+        
+        // Funzione per renderizzare i messaggi di una conversazione
+        const renderConversation = (recipientAddr) => {
+            messagesContainer.innerHTML = '';
+            
+            if (!chatMessages[recipientAddr]) {
+                chatMessages[recipientAddr] = [];
+            }
+            
+            const knownMessageIds = new Set();
+            
+            chatMessages[recipientAddr].forEach(messageData => {
+                const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
+                
+                if (messageKey) {
+                    knownMessageIds.add(messageKey);
+                }
+                
+                const messageTime = new Date(timestamp);
+                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = isSentByMe ? 'message sent' : 'message received';
+                messageElement.setAttribute('data-msg-id', messageKey);
+                messageElement.innerHTML = `
+                    ${decrypted}
+                    <div class="meta">
+                        ${timeString}
+                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageElement);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Crea un set globale per tenere traccia dei messaggi già visualizzati
+            window.displayedMessages = new Set(knownMessageIds);
+            // Esportiamo anche tutti gli ID dei messaggi inviati da me per maggiore sicurezza
+            window.sentMessageIds = new Set();
+            chatMessages[recipientAddr].forEach(msg => {
+                if (msg.isSentByMe) {
+                    window.sentMessageIds.add(msg.messageKey);
+                }
+            });
+        };
+        
+        // Funzione per processare i messaggi in arrivo
+        const processIncomingMessage = (recipientAddr, messageData) => {
+            const { decrypted, isSentByMe, timestamp, sender, messageKey, originalData } = messageData;
+            
+            if (!decrypted) {
+                return;
+            }
+            
+            const uniqueId = messageKey || `msg_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+            
+            // Controlli multipli per evitare duplicati:
+            
+            // 1. Controlla se il messaggio è già nel set di messaggi visualizzati
+            if (window.displayedMessages && window.displayedMessages.has(uniqueId)) {
+                console.log(`Messaggio già visualizzato (displayedMessages): ${uniqueId}`);
+                return;
+            }
+            
+            // 2. Controlla esplicitamente se è un messaggio inviato da noi
+            if (isSentByMe && sender === userAddress) {
+                // 2.1 Controllo se l'ID è nel set dei messaggi inviati
+                if (window.sentMessageIds && window.sentMessageIds.has(uniqueId)) {
+                    console.log(`Messaggio inviato da me già registrato: ${uniqueId}`);
+                    return;
+                }
+                
+                // 2.2 Controllo se il messaggio inizia con "sent_"
+                if (uniqueId.startsWith('sent_')) {
+                    console.log(`Messaggio inviato da me (sent_ prefix): ${uniqueId}`);
+                    return;
+                }
+                
+                // 2.3 Controllo sul contenuto del messaggio
+                if (window.sentMessageContents && window.sentMessageContents.has(decrypted)) {
+                    console.log(`Messaggio inviato da me con stesso contenuto: ${decrypted}`);
+                    window.displayedMessages.add(uniqueId);
+                    return;
+                }
+                
+                // 2.4 Controllo se esiste già un elemento HTML per questo messaggio
+                const existingElements = document.querySelectorAll('.message.sent');
+                for (const el of existingElements) {
+                    const elText = el.textContent.trim();
+                    if (elText.includes(decrypted)) {
+                        console.log(`Messaggio inviato da me già presente nel DOM: ${uniqueId}`);
+                        window.displayedMessages.add(uniqueId);
+                        return;
+                    }
+                }
+            }
+            
+            // 3. Controlla se esiste già un elemento nel DOM con questo ID
+            const existingMsg = document.querySelector(`.message[data-msg-id="${uniqueId}"]`);
+            if (existingMsg) {
+                console.log(`Messaggio già presente nel DOM: ${uniqueId}`);
+                window.displayedMessages.add(uniqueId);
+                return;
+            }
+            
+            // Procedi solo se il messaggio è veramente nuovo
+            
+            const messageToSave = { decrypted, isSentByMe, timestamp, sender, messageKey: uniqueId };
+            chatMessages[recipientAddr].push(messageToSave);
+            
+            // Aggiungi il messaggio alla lista di quelli già visualizzati
+            window.displayedMessages.add(uniqueId);
+            if (isSentByMe) {
+                window.sentMessageIds.add(uniqueId);
+            }
+            
+            saveMessagesToLocalStorage();
+            updateConversationsList();
+            
+            const messageTime = new Date(timestamp);
+            const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = isSentByMe ? 'message sent' : 'message received';
+            messageElement.setAttribute('data-msg-id', uniqueId);
+            messageElement.innerHTML = `
+                ${decrypted}
+                <div class="meta">
+                    ${timeString}
+                    <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        
         // Function to send a message
         const sendMessage = async () => {
             const message = messageInput.value.trim();
@@ -745,6 +954,7 @@
                 if (result.sent) {
                     messageInput.value = '';
                     
+                    // Utilizza un ID univoco con prefisso 'sent_' per distinguere i messaggi inviati
                     const uniqueId = `sent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
                     const messageTime = new Date();
                     const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
@@ -752,6 +962,7 @@
                     const messageElement = document.createElement('div');
                     messageElement.className = 'message sent';
                     messageElement.setAttribute('data-msg-id', uniqueId);
+                    messageElement.setAttribute('data-sent-by-me', 'true');
                     messageElement.innerHTML = `
                         ${message}
                         <div class="meta">
@@ -776,6 +987,23 @@
                     };
                     chatMessages[recipientAddress].push(messageToSave);
                     
+                    // Registra questo messaggio in tutti i possibili set per evitare duplicati
+                    if (!window.displayedMessages) {
+                        window.displayedMessages = new Set();
+                    }
+                    window.displayedMessages.add(uniqueId);
+                    
+                    if (!window.sentMessageIds) {
+                        window.sentMessageIds = new Set();
+                    }
+                    window.sentMessageIds.add(uniqueId);
+                    
+                    // Aggiungi anche una traccia del contenuto per il controllo aggiuntivo
+                    if (!window.sentMessageContents) {
+                        window.sentMessageContents = new Set();
+                    }
+                    window.sentMessageContents.add(message);
+                    
                     saveMessagesToLocalStorage();
                     updateConversationsList();
                     startListeningToConversation(recipientAddress);
@@ -787,108 +1015,6 @@
                 console.error("Error sending message:", error);
                 alert("Error sending message: " + error.message);
             }
-        };
-        
-        // Function to start listening to a conversation
-        const startListeningToConversation = async (recipientAddress) => {
-            if (!recipientAddress || !userAddress) {
-                console.warn("Cannot start listening: missing recipient or sender address");
-                return;
-            }
-            
-            const recipientAddr = recipientAddress.trim();
-            if (!recipientAddr.startsWith('0x')) {
-                alert("Please enter a valid Ethereum address starting with 0x");
-                return;
-            }
-            
-            window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
-            
-            const normalizedRecipient = userAddress.toLowerCase();
-            const normalizedSender = recipientAddr.toLowerCase();
-            const participants = [normalizedSender, normalizedRecipient].sort();
-            const sortedParticipants = participants.join("");
-            const chatNamespace = window.d3.HashNamespace(sortedParticipants);
-            
-            if (!chatMessages[recipientAddr]) {
-                chatMessages[recipientAddr] = [];
-            }
-            
-            messagesContainer.innerHTML = '';
-            const knownMessageIds = new Set();
-            
-            chatMessages[recipientAddr].forEach(messageData => {
-                const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
-                
-                if (messageKey) {
-                    knownMessageIds.add(messageKey);
-                }
-                
-                const messageTime = new Date(timestamp);
-                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
-                
-                const messageElement = document.createElement('div');
-                messageElement.className = isSentByMe ? 'message sent' : 'message received';
-                messageElement.setAttribute('data-msg-id', messageKey);
-                messageElement.innerHTML = `
-                    ${decrypted}
-                    <div class="meta">
-                        ${timeString}
-                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
-                    </div>
-                `;
-                
-                messagesContainer.appendChild(messageElement);
-            });
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            const displayedMessages = new Set(knownMessageIds);
-            
-            window.d3.receiveMessage(recipientAddr, (messageData) => {
-                const { decrypted, isSentByMe, timestamp, sender, messageKey, originalData } = messageData;
-                
-                if (!decrypted) {
-                    return;
-                }
-                
-                const uniqueId = messageKey || `msg_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
-                
-                if (displayedMessages.has(uniqueId) || (isSentByMe && sender === userAddress)) {
-                    return;
-                }
-                
-                const existingMsg = document.querySelector(`.message[data-msg-id="${uniqueId}"]`);
-                if (existingMsg) {
-                    displayedMessages.add(uniqueId);
-                    return;
-                }
-                
-                const messageToSave = { decrypted, isSentByMe, timestamp, sender, messageKey: uniqueId };
-                chatMessages[recipientAddr].push(messageToSave);
-                
-                saveMessagesToLocalStorage();
-                updateConversationsList();
-                
-                const messageTime = new Date(timestamp);
-                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
-                
-                const messageElement = document.createElement('div');
-                messageElement.className = isSentByMe ? 'message sent' : 'message received';
-                messageElement.setAttribute('data-msg-id', uniqueId);
-                messageElement.innerHTML = `
-                    ${decrypted}
-                    <div class="meta">
-                        ${timeString}
-                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
-                    </div>
-                `;
-                
-                messagesContainer.appendChild(messageElement);
-                displayedMessages.add(uniqueId);
-                
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
         };
         
         // Event listeners
@@ -919,7 +1045,7 @@
             messagesContainer.appendChild(loadingMessage);
             
             try {
-                await exploreAndDisplayChatMessages(recipientAddr);
+                await startListeningToConversation(recipientAddr);
                 messagesContainer.removeChild(loadingMessage);
             } catch (error) {
                 loadingMessage.style.color = 'red';
@@ -944,4 +1070,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

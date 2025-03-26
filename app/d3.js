@@ -14,11 +14,6 @@ const GUN_PEERS = [
   // Crea un'istanza di ShogunCore
   const shogunInstance = initShogunBrowser({
     peers: GUN_PEERS,
-    localStorage: false,
-    radisk: false,
-    webauthn: {
-      enabled: false 
-    }
   });
   
   // Recupera l'istanza di Gun da ShogunCore
@@ -695,12 +690,8 @@ const GUN_PEERS = [
      * @param {function} callback Funzione di callback chiamata quando arriva un nuovo messaggio
      */
     receiveMessage: async function (recipientAddress, callback) {
-      // Interrompi eventuali ascolti precedenti
-      this.stopReceiveMessage(recipientAddress);
-      
-      if (!recipientAddress || !window.currentUserAddress) {
-        console.warn("Impossibile ricevere messaggi: indirizzo destinatario o mittente mancante");
-        return;
+      if (!window.activeListeners) {
+        window.activeListeners = new Map();
       }
   
       // Ottieni l'indirizzo dell'utente corrente
@@ -755,6 +746,23 @@ const GUN_PEERS = [
             return;
           }
           
+          // Controlla se è un messaggio inviato dall'utente corrente
+          // Questo aiuta a prevenire la duplicazione
+          const messageFrom = data.from && data.from.toLowerCase();
+          const isSentByMe = messageFrom === normalizedRecipient;
+          
+          // Se è un messaggio inviato da noi, controlliamo anche che non sia già in window.displayedMessages
+          if (isSentByMe && window.displayedMessages && window.displayedMessages.has(key)) {
+            console.log(`RECEIVEMSGS - Messaggio ${key} inviato da me e già visualizzato, ignorato`);
+            return;
+          }
+          
+          // Se il messaggio inizia con "sent_", presumiamo che sia un messaggio che abbiamo inviato noi
+          if (key.startsWith('sent_')) {
+            console.log(`RECEIVEMSGS - Messaggio ${key} è un sent_ message, ignorato`);
+            return;
+          }
+          
           // Marca il messaggio come processato
           processedMessagesMap.set(messageIdentifier, Date.now());
           
@@ -779,10 +787,6 @@ const GUN_PEERS = [
   
           // Aggiungi il timestamp se non presente
           const timestamp = data.date || data.sent_timestamp || Date.now();
-  
-          // Determina la direzione del messaggio
-          const messageFrom = data.from && data.from.toLowerCase();
-          const isSentByMe = messageFrom === normalizedRecipient;
   
           // Chiama il callback con tutte le informazioni necessarie
           if (typeof callback === "function") {
