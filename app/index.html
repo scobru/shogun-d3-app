@@ -460,6 +460,17 @@
                 <span class="status-indicator connecting"></span>
                 <span>Connecting to Gun...</span>
             </div>
+            <div style="margin-top: 15px; font-size: 0.85rem;">
+                <label for="logLevel">Debug Level: </label>
+                <select id="logLevel" style="padding: 4px 8px; border-radius: 4px; background: var(--bg-color); color: var(--primary-color); border: 1px solid var(--light-gray);">
+                    <option value="none">None</option>
+                    <option value="error">Error</option>
+                    <option value="warn">Warning</option>
+                    <option value="info" selected>Info</option>
+                    <option value="debug">Debug</option>
+                    <option value="verbose">Verbose</option>
+                </select>
+            </div>
         </div>
         
         <div id="chatSection" class="chat-section">
@@ -828,6 +839,14 @@
             
             // Controlli multipli per evitare duplicati:
             
+            // 0. Controlla se il messaggio è appena stato inviato da noi
+            if (window.justSentMessageKeys && window.justSentMessageKeys.has(messageKey)) {
+                console.log(`Messaggio appena inviato da noi, ignoro l'eco: ${messageKey}`);
+                window.displayedMessages = window.displayedMessages || new Set();
+                window.displayedMessages.add(uniqueId);
+                return;
+            }
+            
             // 1. Controlla se il messaggio è già nel set di messaggi visualizzati
             if (window.displayedMessages && window.displayedMessages.has(uniqueId)) {
                 console.log(`Messaggio già visualizzato (displayedMessages): ${uniqueId}`);
@@ -952,6 +971,7 @@
                 messagesContainer.removeChild(loadingMsg);
                 
                 if (result.sent) {
+                    console.log("Messaggio inviato con successo, dettagli:", result);
                     messageInput.value = '';
                     
                     // Utilizza un ID univoco con prefisso 'sent_' per distinguere i messaggi inviati
@@ -976,6 +996,17 @@
                     
                     if (!chatMessages[recipientAddress]) {
                         chatMessages[recipientAddress] = [];
+                    }
+                    
+                    // Crea anche un identificatore basato sull'ID del messaggio originale
+                    // per evitare duplicazioni quando il messaggio torna da Gun
+                    if (result.key) {
+                        window.justSentMessageKeys = window.justSentMessageKeys || new Set();
+                        window.justSentMessageKeys.add(result.key);
+                        // Pulisci dopo 5 secondi
+                        setTimeout(() => {
+                            window.justSentMessageKeys.delete(result.key);
+                        }, 5000);
                     }
                     
                     const messageToSave = {
@@ -1068,6 +1099,23 @@
                 updateConversationsList();
             }
         });
+
+        // Aggiungi event listener per il cambio di livello di log
+        document.getElementById('logLevel').addEventListener('change', function(e) {
+            const selectedLevel = e.target.value;
+            if (window.d3 && window.d3.debug) {
+                window.d3.debug.logLevel = selectedLevel;
+                console.log(`Livello di log cambiato a: ${selectedLevel}`);
+            }
+        });
+
+        // Imposta il log level predefinito all'avvio
+        if (window.d3 && window.d3.debug) {
+            const logLevelSelect = document.getElementById('logLevel');
+            if (logLevelSelect) {
+                window.d3.debug.logLevel = logLevelSelect.value;
+            }
+        }
     </script>
 </body>
 </html>

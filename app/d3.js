@@ -29,9 +29,20 @@ const GUN_PEERS = [
     console.log(`Gun peer disconnesso: ${peer}`);
   });
   
-  // Monitoraggio stato sincronizzazione
+  // Monitoraggio stato sincronizzazione - modifica per ridurre il rumore nei log
+  // Commentiamo questa parte o imponiamo un livello di log più alto
+  /*
   window.gun.on("put", function(at) {
     console.log(`Gun PUT operazione sincronizzata:`, at.put);
+  });
+  */
+  
+  // Oppure, utilizziamo un log condizionale che mostra solo informazioni essenziali
+  window.gun.on("put", function(at) {
+    // Verificare se è attivo il debug verbose prima di mostrare i log dettagliati
+    if (window.d3 && window.d3.debug && window.d3.debug.logLevel === 'verbose') {
+      console.log(`Gun PUT operazione sincronizzata:`, at.put);
+    }
   });
   
   // Creazione del namespace Shogun-D3 basato su ShogunCore
@@ -1253,7 +1264,7 @@ const GUN_PEERS = [
   
     // Funzione di debug globale per le attività di rete
     debug: {
-      logLevel: "error", // Default a 'error' per ridurre i log ('none', 'error', 'warn', 'info', 'debug', 'verbose')
+      logLevel: "info", // Cambiato da "error" a "info" per una migliore visibilità di default
   
       log: function (level, ...args) {
         const levels = ["none", "error", "warn", "info", "debug", "verbose"];
@@ -1492,30 +1503,50 @@ const GUN_PEERS = [
   
   // Funzionalità di logging
   function createLogger() {
-    let currentLogLevel = "error"; // Default a 'error'
+    // Definiamo la gerarchia dei livelli di log
     const logLevels = {
-      debug: 0,
-      info: 1,
-      warn: 2,
-      error: 3,
-      none: 4,
+      'none': 0,
+      'error': 1,
+      'warn': 2,
+      'info': 3,
+      'debug': 4,
+      'verbose': 5
     };
-
+    
+    function getLogLevelValue(level) {
+      return logLevels[level] || 0;
+    }
+    
     function log(level, ...args) {
-      if (
-        logLevels[level] === undefined ||
-        logLevels[level] < logLevels[currentLogLevel]
-      ) {
-        return;
-      }
-
-      const prefix = `[SHOGUN-D3:${level.toUpperCase()}]`;
-      if (level === "error") {
-        console.error(prefix, ...args);
-      } else if (level === "warn") {
-        console.warn(prefix, ...args);
-      } else {
-        console.log(prefix, ...args);
+      // Prendiamo il livello di log attualmente configurato
+      const configuredLevel = window.d3?.debug?.logLevel || 'info';
+      
+      // Convertiamo i livelli in valori numerici per confronto
+      const configuredLevelValue = getLogLevelValue(configuredLevel);
+      const currentLevelValue = getLogLevelValue(level);
+      
+      // Logghiamo solo se il livello corrente è <= del livello configurato
+      if (currentLevelValue <= configuredLevelValue) {
+        const timestamp = new Date().toISOString().substring(11, 23);
+        const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+        
+        switch (level) {
+          case 'error':
+            console.error(prefix, ...args);
+            break;
+          case 'warn':
+            console.warn(prefix, ...args);
+            break;
+          case 'info':
+            console.info(prefix, ...args);
+            break;
+          case 'debug':
+          case 'verbose':
+            console.debug(prefix, ...args);
+            break;
+          default:
+            console.log(prefix, ...args);
+        }
       }
     }
 
@@ -1526,19 +1557,19 @@ const GUN_PEERS = [
       error: (...args) => log("error", ...args),
       setLogLevel: (level) => {
         if (level === "none") {
-          currentLogLevel = "none";
+          window.d3.debug.logLevel = "none";
           console.log("[SHOGUN-D3:INFO] Logging disabled");
           return;
         }
 
         if (logLevels[level] !== undefined) {
-          currentLogLevel = level;
+          window.d3.debug.logLevel = level;
           console.log(`[SHOGUN-D3:INFO] Log level set to ${level}`);
         } else {
           console.error(`[SHOGUN-D3:ERROR] Invalid log level: ${level}`);
         }
       },
-      getLogLevel: () => currentLogLevel,
+      getLogLevel: () => window.d3.debug.logLevel,
     };
   }
   
