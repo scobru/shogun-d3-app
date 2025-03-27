@@ -2,7 +2,7 @@
 [![package](https://img.shields.io/npm/v/shogun-d3)](https://npmjs.com/package/shogun-d3)
 ![Contributors](https://img.shields.io/github/contributors/noctisatrae/shogun-d3)
 
-# Shogun-D3: Decentralized Messaging for Ethereum
+# Shogun-D3: Decentralized Messaging for Ethereum ⏳
 
 Shogun-D3 is a powerful library that enables you to easily create **your own decentralized chat applications** for the Ethereum ecosystem and integrate them into any web application.
 
