@@ -3,7 +3,6 @@
 
 // Definisci i peer Gun prima di inizializzare
 const GUN_PEERS = [
-    "https://gun-relay.scobrudot.dev/gun",
     "https://gun-manhattan.herokuapp.com/gun",
     "https://peer.wallie.io/gun",
   ];
