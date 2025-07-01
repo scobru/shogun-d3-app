@@ -1,6 +1,6 @@
 ![Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green)
-[![package](https://img.shields.io/npm/v/shogun-d3)](https://npmjs.com/package/shogun-d3)
-![Contributors](https://img.shields.io/github/contributors/noctisatrae/shogun-d3)
+[![package](https://img.shields.io/npm/v/shogun-d3-app)](https://npmjs.com/package/shogun-d3-app)
+![Contributors](https://img.shields.io/github/contributors/scobru/shogun-d3-app)
 
 # Shogun-D3: Decentralized Messaging for Ethereum ⏳
 
@@ -13,15 +13,17 @@ Shogun-D3 is a powerful library that enables you to easily create **your own dec
 - **MetaMask Integration**: Easy authentication using MetaMask
 - **Persistent Storage**: Messages are stored in decentralized GunDB storage
 - **Key Management**: Backup and restore cryptographic keys
-- **Caching System**: Efficient handling of duplicate messages
+- **Caching System**: Efficient handling of duplicate messages with local storage support
+- **Debug Levels**: Configurable logging levels for development and troubleshooting
+- **Connection Status**: Real-time monitoring of Gun connection state
 - **Flexible API**: Simple to integrate into existing applications
 
 ## Installation
 
 ```bash
-npm install shogun-d3
+npm install shogun-d3-app
 # or
-yarn add shogun-d3
+yarn add shogun-d3-app
 ```
 
 ## Quick Start
@@ -32,11 +34,14 @@ To use Shogun-D3 in your application, you need to include it along with its depe
 <!-- Include required dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="path/to/shogun-core.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shogun-core@1.3.6/dist/browser/shogun-core.js"></script>
 <script src="path/to/d3.js"></script>
 
 <script>
+  // Set debug level (optional)
+  window.d3.debug.setLogLevel('info'); // Options: none, error, warn, info, debug, verbose
+
   // Connect user with MetaMask
   async function connect() {
     try {
@@ -51,14 +56,14 @@ To use Shogun-D3 in your application, you need to include it along with its depe
 
   // Send a message
   async function sendMessage(recipientAddress, messageText) {
-    const result = await window.d3.sendMessage(
+    const result = await window.d3.sendmessage(
       messageText,
       [recipientAddress],
       window.gunKeyPair
     );
 
-    if (result.sent) {
-      console.log("Message sent successfully!");
+    if (result.sent && result.key) {
+      console.log("Message sent successfully! Key:", result.key);
     } else {
       console.error("Error sending message:", result.why);
     }
@@ -66,30 +71,39 @@ To use Shogun-D3 in your application, you need to include it along with its depe
 
   // Receive messages
   async function listenForMessages(recipientAddress) {
-    const cleanupFn = await window.d3.receiveMessage(
-      recipientAddress,
-      (messageData) => {
-        const { decrypted, isSentByMe, timestamp, sender } = messageData;
-        console.log(`New message from ${sender}: ${decrypted}`);
-        console.log(`Sent by me: ${isSentByMe}`);
-        console.log(`Time: ${new Date(timestamp).toLocaleString()}`);
-      }
-    );
+    window.d3.receiveMessage(recipientAddress, (messageData) => {
+      const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
+      console.log(`New message from ${sender}: ${decrypted}`);
+      console.log(`Message ID: ${messageKey}`);
+      console.log(`Sent by me: ${isSentByMe}`);
+      console.log(`Time: ${new Date(timestamp).toLocaleString()}`);
+    });
 
-    // To stop listening later:
-    // cleanupFn();
-    // or: window.d3.stopReceiveMessage(recipientAddress);
+    // To stop listening:
+    // window.d3.stopReceiveMessage(recipientAddress);
+  }
+
+  // Check Gun connection status
+  async function checkGunStatus() {
+    const status = await window.d3.debug.testGunConnection();
+    console.log("Gun connection status:", status);
   }
 </script>
 ```
 
-## [Complete Documentation](https://github.com/noctisatrae/shogun-d3/blob/master/docs/docs.md)
+## [Complete Documentation](https://github.com/scobru/shogun-d3-app/blob/master/docs/docs.md)
 
-For a complete reference of all available methods and options, check out the [documentation](https://github.com/noctisatrae/shogun-d3/blob/master/docs/docs.md).
+For a complete reference of all available methods and options, check out the [documentation](https://github.com/scobru/shogun-d3-app/blob/master/docs/docs.md).
 
 ## Demo Application
 
-Check out the `app` directory in the repository for a complete demo chat application that showcases the features of Shogun-D3.
+A complete demo chat application is included in the repository, showcasing:
+- Theme switching (light/dark mode)
+- Message persistence with local storage
+- Real-time connection status
+- Configurable debug levels
+- Conversation management
+- Encrypted messaging
 
 ## Future Improvements
 
@@ -99,6 +113,9 @@ Check out the `app` directory in the repository for a complete demo chat applica
 - Config file with default settings for SEA keys and peers
 - Offline mode with better synchronization
 - Additional authentication methods
+- Message search and filtering
+- Profile management
+- Message deletion and editing
 
 ## Contributing
 
