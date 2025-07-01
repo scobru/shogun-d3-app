@@ -2,17 +2,19 @@
   "name": "shogun-d3",
   "version": "1.0.0",
   "description": "Chat decentralizzata P2P con GunDB",
-  "main": "server.js",
   "scripts": {
-    "start": "npx http-server -p 3001 -o app/index.html"
+    "start": "vite --port 3001 --open",
+    "dev": "vite --port 3001 --open",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "gun": "^0.2020.1239"
+    "dotenv": "^17.0.0",
+    "gun": "^0.2020.1239",
+    "vercel": "^44.2.7"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22",
-    "http-server": "latest"
+    "vite": "^5.2.11"
   },
   "engines": {
     "node": ">=14.0.0"

@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHOGUN d3</title>
+    <style>
+        :root {
+            /* S3RVER Theme Variables */
+            
+            /* Dark Theme Colors */
+            --dark-bg-start: #1A1240;
+            --dark-bg-end: #0A0821;
+            --dark-card-bg: #1C1B22;
+            --dark-input-bg: #2A2931;
+            --dark-text-primary: #FFFFFF;
+            --dark-text-secondary: #A0AEC0;
+            --dark-border: rgba(255, 255, 255, 0.1);
+            
+            /* Light Theme Colors */
+            --light-bg: #F7FAFC;
+            --light-card-bg: #FFFFFF;
+            --light-input-bg: #EDF2F7;
+            --light-text-primary: #1A202C;
+            --light-text-secondary: #4A5568;
+            --light-border: #E2E8F0;
+
+            /* Common & Accent Colors */
+            --accent-pink: #FF4D94;
+            --accent-yellow: #FFD700;
+            --border-radius: 14px;
+            --spacing: 16px;
+            --transition: all 0.2s ease-in-out;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(180deg, var(--dark-bg-start) 0%, var(--dark-bg-end) 100%);
+            --bg-color: var(--dark-card-bg); /* for elements, not body */
+            --card-color: var(--dark-card-bg);
+            --input-color: var(--dark-input-bg);
+            --text-primary: var(--dark-text-primary);
+            --text-secondary: var(--dark-text-secondary);
+            --accent-color: var(--accent-pink);
+            --border-color: var(--dark-border);
+        }
+
+        [data-theme="light"] {
+            --bg-gradient: var(--light-bg);
+            --bg-color: var(--light-bg);
+            --card-color: var(--light-card-bg);
+            --input-color: var(--light-input-bg);
+            --text-primary: var(--light-text-primary);
+            --text-secondary: var(--light-text-secondary);
+            --accent-color: var(--accent-pink);
+            --border-color: var(--light-border);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+            min-height: 100vh;
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 100vh;
+            padding: var(--spacing);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing);
+            padding-bottom: var(--spacing);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            background: var(--input-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .info {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing);
+            font-size: 0.95rem;
+            border-left: 4px solid var(--accent-color);
+            color: var(--text-secondary);
+        }
+
+        .info ul {
+            padding-left: 20px;
+        }
+
+        .connect-section {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--spacing);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        button:hover {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+
+        .chat-section {
+            display: none;
+            margin-top: var(--spacing);
+        }
+
+        .chat-wrapper {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: var(--spacing);
+            height: calc(100vh - 280px);
+        }
+
+        .conversations-list, .messages {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conversations-list {
+             padding: var(--spacing);
+        }
+
+        .conversation-item {
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 10px;
+            background-color: var(--input-color);
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            border-color: var(--border-color);
+        }
+        
+        .conversation-item.active {
+            border-color: var(--accent-color);
+            background-color: var(--card-color);
+        }
+
+        .conversation-item .address {
+            font-weight: 600;
+        }
+
+        .conversation-item .last-message, .conversation-item .message-count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .messages {
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .messages-header {
+            padding: var(--spacing);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .messages-container {
+            padding: var(--spacing);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: var(--border-radius);
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .message.sent {
+            background-color: var(--accent-color);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            background-color: var(--input-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        
+        .message.sent .meta {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .message.sending {
+            opacity: 0.6;
+        }
+
+        .message.sending .meta {
+            color: var(--text-secondary);
+        }
+
+        .input-area {
+            padding: var(--spacing);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: var(--spacing);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            background-color: var(--input-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .wallet-info {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            flex-grow: 1;
+            color: var(--text-secondary);
+        }
+        
+        .connection-status {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online {
+            background-color: #10B981;
+        }
+
+        .status-indicator.offline {
+            background-color: #EF4444;
+        }
+
+        .status-indicator.connecting {
+            background-color: var(--accent-yellow);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            50% { opacity: 0.5; }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-message {
+            position: absolute;
+            margin-top: 80px;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+            <img src="logo.svg" alt="SHOGUN Logo" style="height: 50px; margin-right: 5px;"> 
+            <h1>d3</h1>
+            </div>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+        </div>
+        
+        <div class="info">
+            <p>To use this decentralized chat, you need:</p>
+            <ul>
+                <li>Metamask installed in your browser</li>
+                <li>An Ethereum address</li>
+            </ul>
+        </div>
+        
+        <div id="wallet-section" class="connect-section">
+            <button id="connectWallet">Connect Wallet</button>
+            <button id="refreshChat">Refresh Chat</button>
+            <div id="walletInfo" class="wallet-info" style="display:none;"></div>
+            <div class="connection-status" id="gunStatus">
+                <span class="status-indicator connecting"></span>
+                <span>Connecting to Gun...</span>
+            </div>
+            <div style="font-size: 0.85rem;">
+                <label for="logLevel">Debug Level: </label>
+                <select id="logLevel">
+                    <option value="none">None</option>
+                    <option value="error">Error</option>
+                    <option value="warn">Warning</option>
+                    <option value="info" selected>Info</option>
+                    <option value="debug">Debug</option>
+                    <option value="verbose">Verbose</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="chatSection" class="chat-section">
+            <div class="chat-wrapper">
+                <div class="conversations-list" id="conversationsList">
+                    <!-- Conversations will appear here -->
+                </div>
+                <div class="messages">
+                    <div class="messages-header">
+                        <input type="text" id="recipientAddress" placeholder="Recipient's ETH address (0x...)">
+                    </div>
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will appear here -->
+                    </div>
+                    <div class="input-area">
+                        <input type="text" id="messageInput" placeholder="Type a message...">
+                        <button id="sendMessage">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-message">Connecting to wallet...<br>Please check your wallet extension</div>
+        </div>
+    </div>
+
+    <!-- Required libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+    
+    <!-- Carica d3.js staticamente con logging -->
+    <script type="module" src="./d3.js" onload="console.log('✓ d3.js script caricato')" onerror="console.error('✗ Errore caricamento d3.js')"></script>
+    
+    <!-- Carica shogun-core con gestione errori -->
+    <script>
+        // Funzione per caricare shogun-core in modo affidabile
+        function loadShogunCore() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = "https://cdn.jsdelivr.net/npm/shogun-core@1.3.6/dist/browser/shogun-core.js";
+                script.onload = () => {
+                    console.log("✓ ShogunCore caricato correttamente");
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error("✗ Errore nel caricamento di ShogunCore");
+                    reject(new Error("Errore nel caricamento di ShogunCore"));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Funzione per verificare la disponibilità di d3
+        function checkD3Availability() {
+            const maxAttempts = 10;
+            let attempts = 0;
+            
+            const checkInterval = setInterval(() => {
+                attempts++;
+                console.log(`Tentativo ${attempts}/${maxAttempts}: Controllo window.d3...`);
+                
+                if (window.d3) {
+                    console.log("✓ window.d3 è disponibile");
+                    clearInterval(checkInterval);
+                    return;
+                }
+                
+                if (attempts >= maxAttempts) {
+                    console.error("✗ window.d3 non è disponibile dopo", maxAttempts, "tentativi");
+                    console.error("Oggetti disponibili su window:", Object.keys(window).filter(k => k.includes('d3') || k.includes('shogun') || k.includes('gun')));
+                    clearInterval(checkInterval);
+                }
+            }, 500);
+        }
+
+        // Carica ShogunCore - d3.js è già caricato staticamente
+        loadShogunCore()
+            .then(() => {
+                console.log("✓ ShogunCore caricato, verifico d3...");
+                checkD3Availability();
+            })
+            .catch(error => {
+                console.error("Errore nell'inizializzazione:", error);
+                alert("Errore nel caricamento delle dipendenze. Ricarica la pagina.");
+            });
+    </script>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                themeToggle.textContent = '🌙';
+            }
+        };
+
+        const getInitialTheme = () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                return savedTheme;
+            }
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return prefersDark ? 'dark' : 'light';
+        };
+
+        let currentTheme = getInitialTheme();
+        applyTheme(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', currentTheme);
+            applyTheme(currentTheme);
+        });
+
+        // DOM Elements
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const walletInfoEl = document.getElementById('walletInfo');
+        const chatSection = document.getElementById('chatSection');
+        const recipientAddressInput = document.getElementById('recipientAddress');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessage');
+        const keyPairStatusElement = document.createElement('div');
+        walletInfoEl.appendChild(keyPairStatusElement);
+
+        // Global variables
+        let userAddress = null;
+        let provider = null;
+        let wallet = null;
+        let gunKeyPair = null;
+        let activeConversations = new Set();
+        let chatMessages = {};
+        
+        // Global tracking of displayed messages
+        let displayedMessageIds = new Set();
+        // Map to store references to temporary sending message elements
+        let sendingMessageElementsMap = new Map();
+        
+        // LocalStorage functions
+        const saveMessagesToLocalStorage = () => {
+            try {
+                localStorage.setItem('shogun_d3_chat_messages', JSON.stringify(chatMessages));
+            } catch (error) {
+                console.error('Error saving messages to localStorage:', error);
+            }
+        };
+        
+        const loadMessagesFromLocalStorage = () => {
+            try {
+                let saved = localStorage.getItem('shogun_d3_chat_messages');
+                if (!saved) {
+                    saved = localStorage.getItem('succus_chat_messages');
+                }
+                
+                if (saved) {
+                    chatMessages = JSON.parse(saved);
+                    
+                    console.log('Messages loaded from localStorage:', Object.keys(chatMessages).length, 'conversations found');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading messages from localStorage:', error);
+            }
+            return false;
+        };
+        
+        // Load messages from localStorage on startup
+        loadMessagesFromLocalStorage();
+        
+        // Function to check Gun status
+        const checkGunStatus = async () => {
+            try {
+                // Wait for d3 to be available
+                if (!window.d3) {
+                    document.getElementById('gunStatus').innerHTML = `
+                        <span class="status-indicator connecting"></span>
+                        <span>Initializing...</span>
+                    `;
+                    return false;
+                }
+
+                // Se d3 è disponibile ma testGunConnection non c'è, usiamo un test semplificato
+                if (!window.d3.debug || !window.d3.debug.testGunConnection) {
+                    // Test semplificato: se abbiamo gun e possiamo fare operazioni base
+                    if (window.gun && window.d3.gun) {
+                        document.getElementById('gunStatus').innerHTML = `
+                            <span class="status-indicator online"></span>
+                            <span>Gun connected (d3 ready)</span>
+                        `;
+                        return true;
+                    } else {
+                        document.getElementById('gunStatus').innerHTML = `
+                            <span class="status-indicator connecting"></span>
+                            <span>Loading Gun...</span>
+                        `;
+                        return false;
+                    }
+                }
+
+                const status = await window.d3.debug.testGunConnection();
+                const statusElement = document.getElementById('gunStatus');
+                
+                if (status.success) {
+                    statusElement.innerHTML = `
+                        <span class="status-indicator online"></span>
+                        <span>Gun connected (latency: ${status.latency}ms)</span>
+                    `;
+                    return true;
+                } else {
+                    statusElement.innerHTML = `
+                        <span class="status-indicator offline"></span>
+                        <span>Gun disconnected: ${status.message}</span>
+                    `;
+                    return false;
+                }
+            } catch (error) {
+                // Se c'è un errore ma d3 è disponibile, mostriamo come connesso
+                if (window.d3 && window.gun) {
+                    document.getElementById('gunStatus').innerHTML = `
+                        <span class="status-indicator online"></span>
+                        <span>Gun operational</span>
+                    `;
+                    return true;
+                } else {
+                    document.getElementById('gunStatus').innerHTML = `
+                        <span class="status-indicator offline"></span>
+                        <span>Gun error: ${error.message}</span>
+                    `;
+                    return false;
+                }
+            }
+        };
+        
+        // Check Gun status every 10 seconds
+        setInterval(checkGunStatus, 10000);
+        checkGunStatus();
+        
+        // Function to connect wallet
+        const connectWallet = async () => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            try {
+                // Show loading overlay
+                loadingOverlay.classList.add('active');
+                
+                // Wait for d3 to be available
+                if (!window.d3) {
+                    throw new Error("D3 is still initializing. Please wait a moment and try again.");
+                }
+
+                const result = await d3.connectWithMetaMask();
+                
+                if (!result || !result.address) {
+                    throw new Error("Connection error: invalid result");
+                }
+                
+                userAddress = result.address;
+                gunKeyPair = result.keypair;
+                
+                window.currentUserAddress = userAddress;
+                window.gunKeyPair = gunKeyPair;
+                
+                const walletInfoContainer = document.getElementById('walletInfo');
+                walletInfoContainer.style.display = 'block';
+                walletInfoContainer.innerHTML = `
+                    <div style="font-weight: 600; color: var(--accent-color); margin-bottom: 8px;">Wallet connected!</div>
+                    <div>Address: <code style="font-family: monospace; word-break: break-all;">${userAddress}</code></div>
+                `;
+                
+                keyPairStatusElement.innerHTML = `<span style="color: var(--accent-color)">✓ Keypair active</span>`;
+                
+                chatSection.style.display = 'block';
+            } catch (error) {
+                console.error("Error connecting to wallet:", error);
+                alert("Error connecting to wallet: " + error.message);
+            } finally {
+                // Hide loading overlay
+                loadingOverlay.classList.remove('active');
+            }
+        };
+        
+        // Function to update conversations list
+        const updateConversationsList = () => {
+            const conversationsList = document.getElementById('conversationsList');
+            conversationsList.innerHTML = '';
+            
+            const currentRecipient = recipientAddressInput.value.trim();
+            const conversations = Object.keys(chatMessages);
+            
+            if (conversations.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'conversation-item';
+                emptyItem.innerHTML = '<div class="address">No conversations yet</div>';
+                conversationsList.appendChild(emptyItem);
+                return;
+            }
+            
+            conversations.sort((a, b) => {
+                const lastMsgA = chatMessages[a].length > 0 ? 
+                    chatMessages[a][chatMessages[a].length - 1].timestamp : 0;
+                const lastMsgB = chatMessages[b].length > 0 ? 
+                    chatMessages[b][chatMessages[b].length - 1].timestamp : 0;
+                return lastMsgB - lastMsgA;
+            });
+            
+            conversations.forEach(address => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                if (address === currentRecipient) {
+                    item.className += ' active';
+                }
+                
+                const messageCount = chatMessages[address].length;
+                const lastMessage = messageCount > 0 ? 
+                    chatMessages[address][chatMessages[address].length - 1].decrypted : '';
+                const lastMessagePreview = lastMessage.length > 20 ? 
+                    lastMessage.substring(0, 20) + '...' : lastMessage;
+                
+                item.innerHTML = `
+                    <div class="address">${address.slice(0, 6)}...${address.slice(-4)}</div>
+                    <div class="message-count">${messageCount} messages</div>
+                    <div class="last-message">${lastMessagePreview}</div>
+                `;
+                
+                item.addEventListener('click', () => {
+                    recipientAddressInput.value = address;
+                    startListeningToConversation(address);
+                    
+                    document.querySelectorAll('.conversation-item').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                });
+                
+                conversationsList.appendChild(item);
+            });
+        };
+        
+        // Function to start listening to a conversation
+        const startListeningToConversation = async (recipientAddress) => {
+            if (!recipientAddress || !userAddress) {
+                console.warn("Cannot start listening: missing recipient or sender address");
+                return;
+            }
+            
+            const recipientAddr = recipientAddress.trim();
+            if (!recipientAddr.startsWith('0x')) {
+                alert("Please enter a valid Ethereum address starting with 0x");
+                return;
+            }
+            
+            // Verifica se c'è già un listener attivo per questo indirizzo
+            if (window.d3.activeListeners && window.d3.activeListeners.has(recipientAddr)) {
+                console.log(`Listener già attivo per ${recipientAddr}, non ne creo un altro`);
+                // Aggiorniamo solo la visualizzazione dei messaggi
+                renderConversation(recipientAddr);
+                return;
+            }
+            
+            // Prima ferma eventuali listener precedenti
+            window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
+            
+            // Inizializza o carica la conversazione
+            renderConversation(recipientAddr);
+            
+            // Avvia il nuovo listener
+            window.d3.receiveMessage(recipientAddr, (messageData) => {
+                processIncomingMessage(recipientAddr, messageData);
+            });
+        };
+        
+        // Funzione per renderizzare i messaggi di una conversazione
+        const renderConversation = (recipientAddr) => {
+            messagesContainer.innerHTML = '';
+            
+            if (!chatMessages[recipientAddr]) {
+                chatMessages[recipientAddr] = [];
+            }
+            
+            chatMessages[recipientAddr].forEach(messageData => {
+                const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
+                
+                const messageTime = new Date(timestamp);
+                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = isSentByMe ? 'message sent' : 'message received';
+                messageElement.setAttribute('data-msg-id', messageKey);
+                messageElement.innerHTML = `
+                    ${decrypted}
+                    <div class="meta">
+                        ${timeString}
+                        <span class="message-sender">${isSentByMe ? 'You' : (sender ? sender.slice(0, 6) + '...' : 'Unknown')}</span>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageElement);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        
+        // Funzione per processare i messaggi in arrivo
+        const processIncomingMessage = (recipientAddr, messageData) => {
+            const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
+            
+            if (!decrypted || !messageKey) {
+                console.warn("Received incomplete message data, ignoring.", messageData);
+                return;
+            }
+            
+            // Step 1: Check if this message is already fully displayed and tracked.
+            if (displayedMessageIds.has(messageKey)) {
+                console.log(`Message ${messageKey} already fully displayed and tracked, skipping DOM update.`);
+                // If it's already in the DOM and tracked, we just ensure it's in chatMessages
+                if (!chatMessages[recipientAddr]) {
+                    chatMessages[recipientAddr] = [];
+                }
+                const existingChatMsgIndex = chatMessages[recipientAddr].findIndex(msg => msg.messageKey === messageKey);
+                if (existingChatMsgIndex === -1) {
+                    chatMessages[recipientAddr].push({ decrypted, isSentByMe, timestamp, sender, messageKey });
+                    saveMessagesToLocalStorage();
+                    updateConversationsList();
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                return; // Nothing more to do for this message's DOM representation
+            }
+
+            // Prepare message HTML content
+            const messageTime = new Date(timestamp);
+            const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+            const messageHtmlContent = `
+                ${decrypted}
+                <div class="meta">
+                    ${timeString}
+                    <span class="message-sender">${isSentByMe ? 'You' : (sender ? sender.slice(0, 6) + '...' : 'Unknown')}</span>
+                </div>
+            `;
+
+            let messageElement = null;
+
+            // Step 2: Try to find a temporary 'sending' DOM element that matches this incoming message.
+            // This prioritizes updating the placeholder that was created when the message was sent.
+            const existingTempSendingElements = document.querySelectorAll(`[data-msg-id^="local-sending-"]`);
+
+            for (const tempEl of existingTempSendingElements) {
+                // Heuristic: If a 'sending' message's current text content (excluding meta) matches the decrypted message,
+                // it's likely the one we sent and needs to be updated to its final state.
+                const tempContent = tempEl.innerText.split('\n')[0].trim(); // Get only the message text, not the "Sending..." meta
+                if (tempContent === decrypted.trim()) {
+                    messageElement = tempEl;
+                    console.log(`Found matching temporary sending message ${tempEl.getAttribute('data-msg-id')} for final ID ${messageKey}. Updating.`);
+                    // Remove from map if it was being tracked there (cleanup from sendMessage)
+                    sendingMessageElementsMap.delete(tempEl.getAttribute('data-msg-id'));
+                    break; // Found and will handle, exit loop
+                }
+            }
+
+            // Step 3: If no temporary message was found/matched, check for a fully processed element with the final messageKey.
+            // This might happen if the message was loaded from local storage or received before the temp element was processed.
+            if (!messageElement) {
+                messageElement = document.querySelector(`[data-msg-id="${messageKey}"]`);
+            }
+            
+            if (messageElement) {
+                // An element related to this message already exists in the DOM.
+                console.log(`Updating existing DOM element for message ${messageKey}.`);
+                
+                // Update attributes and classes
+                messageElement.setAttribute('data-msg-id', messageKey);
+                messageElement.classList.remove('sending'); // Ensure 'sending' class is removed
+                messageElement.style.opacity = '1';
+
+                // Update innerHTML to reflect final decrypted content and timestamp
+                messageElement.innerHTML = messageHtmlContent;
+
+                // Add to tracking set. This is done here to ensure consistency after potential update.
+                displayedMessageIds.add(messageKey);
+
+            } else { 
+                // Step 4: No existing DOM element found for this message (neither final nor temporary matching).
+                // This means it's a completely new message to be rendered.
+                console.log(`No existing DOM element found for message ${messageKey}, creating new.`);
+                
+                messageElement = document.createElement('div');
+                messageElement.className = isSentByMe ? 'message sent' : 'message received';
+                messageElement.setAttribute('data-msg-id', messageKey);
+                messageElement.innerHTML = messageHtmlContent;
+                messagesContainer.appendChild(messageElement);
+                
+                // Add to tracking set after creating a new element
+                displayedMessageIds.add(messageKey);
+            }
+            
+            // Step 5: Save to chat messages if not already there (applies to both new and updated messages if they weren't in chatMessages yet)
+            if (!chatMessages[recipientAddr]) {
+                chatMessages[recipientAddr] = [];
+            }
+            
+            const existingMessageIndex = chatMessages[recipientAddr].findIndex(msg => msg.messageKey === messageKey);
+            if (existingMessageIndex === -1) {
+                chatMessages[recipientAddr].push({ decrypted, isSentByMe, timestamp, sender, messageKey });
+                saveMessagesToLocalStorage();
+                updateConversationsList();
+            }
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        
+        // Function to send a message
+        const sendMessage = async () => {
+            const message = messageInput.value.trim();
+            const recipientAddress = recipientAddressInput.value.trim();
+            
+            if (!message || !recipientAddress) {
+                alert("Please enter both a message and a recipient address.");
+                return;
+            }
+            
+            // Generate a unique temporary ID for this sending message
+            const tempSendingId = `local-sending-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+            // Always create a new sending message element
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message sent sending';
+            messageElement.style.opacity = '0.6';
+            messageElement.setAttribute('data-msg-id', tempSendingId);
+            messageElement.innerHTML = `
+                ${message}
+                <div class="meta">Sending...</div>
+            `;
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Store reference to the temporary element for later update
+            sendingMessageElementsMap.set(tempSendingId, messageElement);
+
+            try {
+                const recipientPubKey = await d3.getKeypair(recipientAddress);
+                
+                if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+                    if (confirm(`Recipient ${recipientAddress} doesn't have a valid keypair. Generate a public key for testing?`)) {
+                        const tempKeyPair = await d3.SEA.pair();
+                        const publicPart = { pub: tempKeyPair.pub, epub: tempKeyPair.epub };
+                        await d3.registerKeypair(recipientAddress, publicPart);
+                        alert(`Public keypair generated for ${recipientAddress}. Try sending the message again.`);
+                    } else {
+                        alert(`Recipient ${recipientAddress} doesn't have a valid keypair. They cannot receive messages.`);
+                    }
+                    messageElement.remove(); // Remove the sending message if we can't proceed
+                    return;
+                }
+
+                const result = await d3.sendmessage(message, [recipientAddress], gunKeyPair);
+                
+                if (result.sent && result.key) {
+                    messageInput.value = '';
+                    const messageTime = new Date();
+                    const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                    
+                    // Retrieve the temporary message element using its original tempSendingId
+                    const tempElToUpdate = sendingMessageElementsMap.get(tempSendingId);
+                    if (tempElToUpdate) {
+                        // Update the sending message with success
+                        tempElToUpdate.classList.remove('sending'); // Remove sending class
+                        tempElToUpdate.style.opacity = '1'; // Full opacity
+                        tempElToUpdate.setAttribute('data-msg-id', result.key); // Set final message ID
+                        tempElToUpdate.innerHTML = `
+                            ${message}
+                            <div class="meta">
+                                ${timeString}
+                                <span class="message-sender">You</span>
+                            </div>
+                        `;
+                        sendingMessageElementsMap.delete(tempSendingId); // Remove from map after update
+                    } else {
+                        console.warn(`Could not find temporary message element with ID ${tempSendingId} to update.`);
+                    }
+
+                } else {
+                    // Update the sending message with error state
+                    messageElement.innerHTML = `
+                        ${message}
+                        <div class="meta" style="color: #EF4444;">Failed to send</div>
+                    `;
+                    alert("Error sending message: " + (result.why ? result.why.message || result.why : "Unknown error"));
+                    sendingMessageElementsMap.delete(tempSendingId); // Clean up on failure
+                }
+            } catch (error) {
+                // Update the sending message with error state
+                const tempElToUpdate = sendingMessageElementsMap.get(tempSendingId);
+                if (tempElToUpdate) {
+                    tempElToUpdate.classList.remove('sending');
+                    tempElToUpdate.style.opacity = '1';
+                    tempElToUpdate.innerHTML = `
+                            ${message}
+                            <div class="meta" style="color: #EF4444;">Failed to send: ${error.message}</div>
+                        `;
+                    sendingMessageElementsMap.delete(tempSendingId); // Clean up on error
+                }
+                console.error("Error sending message:", error);
+                alert("Error sending message: " + error.message);
+            }
+        };
+        
+        // Event listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        sendMessageBtn.addEventListener('click', sendMessage);
+        
+        recipientAddressInput.addEventListener('input', (e) => {
+            const recipientAddress = e.target.value.trim();
+            if (recipientAddress.startsWith('0x') && recipientAddress.length > 10) {
+                startListeningToConversation(recipientAddress);
+            }
+        });
+        
+        document.getElementById('refreshChat').addEventListener('click', async () => {
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                alert("Please enter a valid recipient address first");
+                return;
+            }
+            
+            messagesContainer.innerHTML = '';
+            
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'message';
+            loadingMessage.style.textAlign = 'center';
+            loadingMessage.style.color = '#888';
+            loadingMessage.innerText = 'Loading messages...';
+            messagesContainer.appendChild(loadingMessage);
+            
+            try {
+                await startListeningToConversation(recipientAddr);
+                messagesContainer.removeChild(loadingMessage);
+            } catch (error) {
+                loadingMessage.style.color = 'red';
+                loadingMessage.innerText = `Loading error: ${error.message}`;
+            }
+        });
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        window.addEventListener('beforeunload', () => {
+            saveMessagesToLocalStorage();
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            if (Object.keys(chatMessages).length > 0) {
+                updateConversationsList();
+            }
+        });
+
+        // Aggiungi event listener per il cambio di livello di log
+        document.getElementById('logLevel').addEventListener('change', function(e) {
+            const selectedLevel = e.target.value;
+            if (window.d3 && window.d3.debug && window.d3.debug.setLogLevel) {
+                window.d3.debug.setLogLevel(selectedLevel);
+            } else {
+                console.log(`Log level will be set to ${selectedLevel} when d3 is ready`);
+                // Store the preference for when d3 is available
+                window.pendingLogLevel = selectedLevel;
+            }
+        });
+
+        // Check periodically if d3 is ready and set pending log level
+        const logLevelChecker = setInterval(() => {
+            if (window.d3 && window.d3.debug && window.d3.debug.setLogLevel && window.pendingLogLevel) {
+                window.d3.debug.setLogLevel(window.pendingLogLevel);
+                window.pendingLogLevel = null;
+                clearInterval(logLevelChecker);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
