@@ -38,7 +38,7 @@ const GUN_PEERS = [
             // Verifica la versione
             const requiredVersion = '1.3.5';
             if (CoreClass.API_VERSION) {
-              const currentVersion = CoreClass.API_VERSION.replace('v', '').split('-')[0];
+              const currentVersion = CoreClass.no.replace('v', '').split('-')[0];
               if (!checkVersion(currentVersion, requiredVersion)) {
                 console.warn(`⚠️ Versione ShogunCore (${currentVersion}) potrebbe non essere compatibile con la versione richiesta (${requiredVersion})`);
               }
