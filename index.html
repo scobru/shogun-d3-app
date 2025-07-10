@@ -532,6 +532,26 @@
                 script.src = "https://cdn.jsdelivr.net/npm/shogun-core@1.3.6/dist/browser/shogun-core.js";
                 script.onload = () => {
                     console.log("✓ ShogunCore caricato correttamente");
+                    // Inizializza Shogun dopo il caricamento
+                    window.shogun = window.initShogunCore({
+                        authToken: "shogun2025",
+                        peers: ['https://gun-manhattan.herokuapp.com/gun', 'wss://ruling-mastodon-improved.ngrok-free.app/gun'],
+                        scope: 'shogun-d3',
+                        webauthn: {
+                            enabled: true,
+                            rpName: 'ShogunD3',
+                            rpId: window.location.hostname,
+                            userVerification: 'preferred'
+                        },
+                        web3: {
+                            enabled: true,
+                            networks: ['ethereum']
+                        },
+                        nostr: {
+                            enabled: true,
+                            relays: ['wss://relay.damus.io', 'wss://nostr.fmt.wiz.biz']
+                        }
+                    });
                     resolve();
                 };
                 script.onerror = () => {
@@ -551,14 +571,17 @@
                 attempts++;
                 console.log(`Tentativo ${attempts}/${maxAttempts}: Controllo window.d3...`);
                 
-                if (window.d3) {
-                    console.log("✓ window.d3 è disponibile");
+                if (window.d3 && window.shogun) {
+                    console.log("✓ window.d3 e shogun sono disponibili");
                     clearInterval(checkInterval);
+                    
+                    // Inizializza d3 con shogun
+                    window.d3.init(window.shogun);
                     return;
                 }
                 
                 if (attempts >= maxAttempts) {
-                    console.error("✗ window.d3 non è disponibile dopo", maxAttempts, "tentativi");
+                    console.error("✗ window.d3 o shogun non sono disponibili dopo", maxAttempts, "tentativi");
                     console.error("Oggetti disponibili su window:", Object.keys(window).filter(k => k.includes('d3') || k.includes('shogun') || k.includes('gun')));
                     clearInterval(checkInterval);
                 }
@@ -740,19 +763,31 @@
                 // Show loading overlay
                 loadingOverlay.classList.add('active');
                 
-                // Wait for d3 to be available
-                if (!window.d3) {
-                    throw new Error("D3 is still initializing. Please wait a moment and try again.");
+                // Wait for d3 and shogun to be available
+                if (!window.d3 || !window.shogun) {
+                    throw new Error("D3 or Shogun is still initializing. Please wait a moment and try again.");
                 }
 
-                const result = await d3.connectWithMetaMask();
-                
-                if (!result || !result.address) {
-                    throw new Error("Connection error: invalid result");
+                // Get Web3 plugin
+                const web3Plugin = window.shogun.getPlugin("web3");
+                if (!web3Plugin) {
+                    throw new Error("Web3 plugin not available");
                 }
-                
-                userAddress = result.address;
-                gunKeyPair = result.keypair;
+
+                // Connect MetaMask
+                const connectionResult = await web3Plugin.connectMetaMask();
+                if (!connectionResult.success || !connectionResult.address) {
+                    throw new Error(connectionResult.error || "Failed to connect wallet.");
+                }
+
+                // Login with Web3
+                const loginResult = await web3Plugin.login(connectionResult.address);
+                if (!loginResult.success) {
+                    throw new Error(loginResult.error || "Failed to login with Web3.");
+                }
+
+                userAddress = connectionResult.address;
+                gunKeyPair = loginResult.keypair;
                 
                 window.currentUserAddress = userAddress;
                 window.gunKeyPair = gunKeyPair;
@@ -767,6 +802,9 @@
                 keyPairStatusElement.innerHTML = `<span style="color: var(--accent-color)">✓ Keypair active</span>`;
                 
                 chatSection.style.display = 'block';
+
+                // Initialize d3 with the new connection
+                await window.d3.init(window.shogun);
             } catch (error) {
                 console.error("Error connecting to wallet:", error);
                 alert("Error connecting to wallet: " + error.message);
