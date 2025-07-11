@@ -363,47 +363,41 @@
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
             z-index: 1000;
-            backdrop-filter: blur(3px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease-in-out;
         }
 
         .loading-overlay.active {
-            opacity: 1;
-            pointer-events: all;
+            display: flex;
         }
 
         .loading-spinner {
             width: 50px;
             height: 50px;
-            border: 3px solid var(--border-color);
+            border: 4px solid var(--accent-color);
+            border-top: 4px solid transparent;
             border-radius: 50%;
-            border-top-color: var(--accent-color);
             animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
 
-        .loading-message {
-            position: absolute;
-            margin-top: 80px;
+        .loading-text {
             color: white;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             text-align: center;
-            max-width: 80%;
-            line-height: 1.5;
+            margin-top: 1rem;
+            font-weight: 500;
         }
 
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         footer {
@@ -496,9 +490,9 @@
                 </div>
             </div>
 
-            <div class="loading-overlay" id="loadingOverlay">
+            <div id="loadingOverlay" class="loading-overlay">
                 <div class="loading-spinner"></div>
-                <div class="loading-message">Connecting to wallet...<br>Please check your wallet extension</div>
+                <div class="loading-text">Connecting to wallet...</div>
             </div>
         </div>
 
@@ -521,7 +515,7 @@
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
     
     <!-- Carica d3.js staticamente con logging -->
-    <script type="module" src="./d3.js" onload="console.log('✓ d3.js script caricato')" onerror="console.error('✗ Errore caricamento d3.js')"></script>
+    <script src="./d3.js" onload="console.log('✓ d3.js script caricato')" onerror="console.error('✗ Errore caricamento d3.js')"></script>
     
     <!-- Carica shogun-core con gestione errori -->
     <script>
@@ -533,7 +527,7 @@
                 script.onload = () => {
                     console.log("✓ ShogunCore caricato correttamente");
                     // Inizializza Shogun dopo il caricamento
-                    window.shogun = window.initShogunCore({
+                    window.shogun = window.initShogun({
                         authToken: "shogun2025",
                         peers: ['https://gun-manhattan.herokuapp.com/gun', 'wss://ruling-mastodon-improved.ngrok-free.app/gun'],
                         scope: 'shogun-d3',
@@ -575,8 +569,10 @@
                     console.log("✓ window.d3 e shogun sono disponibili");
                     clearInterval(checkInterval);
                     
-                    // Inizializza d3 con shogun
-                    window.d3.init(window.shogun);
+                    // D3 è già inizializzato, verifica che shogun sia configurato correttamente
+                    if (window.d3.shogun !== window.shogun) {
+                        window.d3.init(window.shogun);
+                    }
                     return;
                 }
                 
@@ -755,62 +751,162 @@
         setInterval(checkGunStatus, 10000);
         checkGunStatus();
         
-        // Function to connect wallet
         const connectWallet = async () => {
             const loadingOverlay = document.getElementById('loadingOverlay');
+            const walletInfoContainer = document.getElementById('walletInfo');
+            const chatSection = document.getElementById('chatSection');
             
             try {
                 // Show loading overlay
                 loadingOverlay.classList.add('active');
+                loadingOverlay.querySelector('.loading-text').textContent = 'Connecting to wallet...';
                 
                 // Wait for d3 and shogun to be available
                 if (!window.d3 || !window.shogun) {
                     throw new Error("D3 or Shogun is still initializing. Please wait a moment and try again.");
                 }
 
-                // Get Web3 plugin
-                const web3Plugin = window.shogun.getPlugin("web3");
-                if (!web3Plugin) {
-                    throw new Error("Web3 plugin not available");
+                console.log("Starting wallet connection...");
+
+                // Get provider first
+                loadingOverlay.querySelector('.loading-text').textContent = 'Requesting wallet access...';
+                const provider = await window.d3.getProvider();
+                if (!provider) {
+                    throw new Error("Failed to get MetaMask provider");
                 }
 
-                // Connect MetaMask
-                const connectionResult = await web3Plugin.connectMetaMask();
-                if (!connectionResult.success || !connectionResult.address) {
-                    throw new Error(connectionResult.error || "Failed to connect wallet.");
-                }
+                // Get address
+                const address = await provider.getSigner().getAddress();
+                console.log("Got address:", address);
 
-                // Login with Web3
-                const loginResult = await web3Plugin.login(connectionResult.address);
-                if (!loginResult.success) {
-                    throw new Error(loginResult.error || "Failed to login with Web3.");
-                }
-
-                userAddress = connectionResult.address;
-                gunKeyPair = loginResult.keypair;
+                // Get Web3 plugin and authenticate
+                loadingOverlay.querySelector('.loading-text').textContent = 'Authenticating...';
                 
+                await new Promise((resolve, reject) => {
+                    const pollInterval = 500;
+                    const timeout = 20000;
+                    let elapsedTime = 0;
+                    const web3Plugin = window.shogun.getPlugin("web3");
+
+                    if (!web3Plugin) {
+                        return reject(new Error("Web3 plugin not available"));
+                    }
+
+                    // Start polling
+                    const poll = setInterval(() => {
+                        elapsedTime += pollInterval;
+                        const user = window.shogun.user;
+
+                        if (user && user.is) {
+                            console.log("Authentication confirmed by polling user object.", user);
+                            clearInterval(poll);
+                            clearTimeout(rejectionTimeout); // clear the outer timeout
+                            resolve(user);
+                        }
+                    }, pollInterval);
+
+                    // Set a timeout for the whole process
+                    const rejectionTimeout = setTimeout(() => {
+                        clearInterval(poll);
+                        reject(new Error("Authentication timed out after 20 seconds."));
+                    }, timeout);
+
+                    // Trigger the authentication flow
+                    console.log("Attempting Web3 authentication trigger...");
+                    web3Plugin.login(address).catch(async (loginError) => {
+                        console.log("Login failed, trying signup:", loginError.message);
+                        loadingOverlay.querySelector('.loading-text').textContent = 'Creating new account...';
+                        try {
+                            // The login promise rejected, so now we try signup.
+                            // The polling will catch the user creation from this.
+                            await web3Plugin.signUp(address);
+                        } catch (signUpError) {
+                            // If signup also fails immediately, we can reject.
+                            clearInterval(poll);
+                            clearTimeout(rejectionTimeout);
+                            reject(new Error("Signup failed: " + signUpError.message));
+                        }
+                    });
+                });
+
+
+                console.log("Authentication successful!");
+                loadingOverlay.querySelector('.loading-text').textContent = 'Getting encryption keys...';
+
+                // Wait a moment for Gun to propagate the user data
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Get keypair from shogun user
+                const gunUser = window.shogun.user;
+                
+                let keypair = gunUser && gunUser._ && gunUser._.sea;
+
+                if (!keypair) {
+                    // Try to get it from the auth result or wait a bit more
+                    console.log("Keypair not immediately available, waiting longer...");
+                    loadingOverlay.querySelector('.loading-text').textContent = 'Waiting for key generation...';
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    const retryKeypair = window.shogun.user && window.shogun.user._ && window.shogun.user._.sea;
+                    if (!retryKeypair) {
+                        throw new Error("Failed to get keypair from authenticated user after retries");
+                    }
+                    keypair = retryKeypair;
+                }
+
+                console.log("Got keypair:", keypair);
+
+                // Set global variables
+                userAddress = address;
+                gunKeyPair = keypair;
                 window.currentUserAddress = userAddress;
                 window.gunKeyPair = gunKeyPair;
                 
-                const walletInfoContainer = document.getElementById('walletInfo');
+                // Register keypair if we have the required keys
+                if (keypair.pub && keypair.epub) {
+                    try {
+                        loadingOverlay.querySelector('.loading-text').textContent = 'Registering encryption keys...';
+                        await window.d3.registerKeypair(address, {
+                            pub: keypair.pub,
+                            epub: keypair.epub
+                        });
+                        console.log("Keypair registered successfully");
+                    } catch (regError) {
+                        console.warn("Failed to register keypair:", regError.message);
+                    }
+                }
+                
+                // Update UI
+                loadingOverlay.querySelector('.loading-text').textContent = 'Finalizing...';
                 walletInfoContainer.style.display = 'block';
                 walletInfoContainer.innerHTML = `
                     <div style="font-weight: 600; color: var(--accent-color); margin-bottom: 8px;">Wallet connected!</div>
                     <div>Address: <code style="font-family: monospace; word-break: break-all;">${userAddress}</code></div>
                 `;
                 
+                const keyPairStatusElement = document.createElement('div');
+                walletInfoContainer.appendChild(keyPairStatusElement);
                 keyPairStatusElement.innerHTML = `<span style="color: var(--accent-color)">✓ Keypair active</span>`;
-                
                 chatSection.style.display = 'block';
+                
+                console.log("✓ Wallet connected successfully:", userAddress);
+                
+                // Update conversations list if there are saved messages
+                updateConversationsList();
 
-                // Initialize d3 with the new connection
-                await window.d3.init(window.shogun);
+                // Give the UI a moment to update before hiding the overlay
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
             } catch (error) {
                 console.error("Error connecting to wallet:", error);
                 alert("Error connecting to wallet: " + error.message);
             } finally {
-                // Hide loading overlay
+                // Hide loading overlay with a small delay to ensure UI updates are complete
+                setTimeout(() => {
+                    console.log("Hiding loading overlay");
                 loadingOverlay.classList.remove('active');
+                    loadingOverlay.querySelector('.loading-text').textContent = 'Connecting to wallet...'; // Reset text
+                }, 100);
             }
         };
         

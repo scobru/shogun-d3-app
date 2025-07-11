@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shogun D3 Test</title>
+</head>
+<body>
+    <h1>Shogun D3 Initialization Test</h1>
+    <div id="status">Loading...</div>
+    <div id="logs"></div>
+
+    <!-- Required libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+    
+    <!-- Load ShogunCore -->
+    <script src="https://cdn.jsdelivr.net/npm/shogun-core/dist/browser/shogun-core.js"></script>
+    
+    <!-- Load d3.js -->
+    <script src="./d3.js"></script>
+    
+    <script>
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        
+        function addLog(message) {
+            const logEl = document.createElement('div');
+            logEl.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsEl.appendChild(logEl);
+            console.log(message);
+        }
+        
+        function updateStatus(message) {
+            statusEl.textContent = message;
+            addLog(message);
+        }
+        
+        // Initialize test
+        async function runTest() {
+            try {
+                updateStatus("Initializing ShogunCore...");
+                
+                // Initialize Shogun
+                if (typeof window.initShogun === 'function') {
+                    window.shogun = window.initShogun({
+                        authToken: "shogun2025",
+                        peers: ['https://gun-manhattan.herokuapp.com/gun'],
+                        scope: 'shogun-d3',
+                        web3: { enabled: true },
+                        nostr: { enabled: true }
+                    });
+                    addLog("✓ ShogunCore initialized");
+                } else {
+                    throw new Error("initShogun function not available");
+                }
+                
+                // Wait for d3 to be available
+                let attempts = 0;
+                const maxAttempts = 20;
+                
+                while (attempts < maxAttempts) {
+                    if (window.d3) {
+                        addLog("✓ window.d3 found");
+                        break;
+                    }
+                    attempts++;
+                    addLog(`Waiting for d3... attempt ${attempts}/${maxAttempts}`);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                if (!window.d3) {
+                    throw new Error("window.d3 not available after timeout");
+                }
+                
+                // Test d3 initialization
+                if (typeof window.d3.init === 'function') {
+                    window.d3.init(window.shogun);
+                    addLog("✓ d3.init() called successfully");
+                } else {
+                    addLog("⚠️ d3.init() method not found, but d3 object exists");
+                }
+                
+                // Test basic d3 functions
+                if (window.d3.HashNamespace) {
+                    const testHash = window.d3.HashNamespace("test");
+                    addLog(`✓ HashNamespace test: ${testHash}`);
+                }
+                
+                if (window.d3.debug && window.d3.debug.setLogLevel) {
+                    window.d3.debug.setLogLevel("info");
+                    addLog("✓ Debug logging configured");
+                }
+                
+                updateStatus("✅ All tests passed!");
+                
+            } catch (error) {
+                updateStatus(`❌ Test failed: ${error.message}`);
+                addLog(`Error details: ${error.stack}`);
+            }
+        }
+        
+        // Start test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTest, 1000); // Give time for scripts to load
+        });
+    </script>
+</body>
+</html> 
