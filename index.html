@@ -532,25 +532,16 @@
                         authToken: "shogun2025",
                         peers: ['https://gun-manhattan.herokuapp.com/gun', 'wss://ruling-mastodon-improved.ngrok-free.app/gun'],
                         scope: 'shogun',
-                        webauthn: {
-                            enabled: true,
-                            rpName: 'ShogunD3',
-                            rpId: window.location.hostname,
-                            userVerification: 'preferred'
-                        },
                         web3: {
                             enabled: true,
                             networks: ['ethereum']
-                        },
-                        nostr: {
-                            enabled: true,
-                            relays: ['wss://relay.damus.io', 'wss://nostr.fmt.wiz.biz']
                         },
                         oauth: {
                             enabled: false
                         }
                     });
 
+                    window.shogun = window.ShogunCore
                     console.log(window.shogun)
                     resolve();
                 };
@@ -579,6 +570,7 @@
                     if (window.d3.shogun !== window.shogun) {
                         window.d3.init(window.shogun);
                     }
+
                     return;
                 }
                 
