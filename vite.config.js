@@ -12,7 +12,10 @@ export default defineConfig({
         main: resolve(__dirname, 'app/index.html'),
         chat: resolve(__dirname, 'app/d3.html')
       }
-    }
+    },
+    // Assicurati che tutti i file statici vengano copiati
+    assetsDir: '',
+    copyPublicDir: true
   },
   server: {
     port: 3001,
@@ -30,5 +33,7 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis'
-  }
+  },
+  // Configurazione per servire file statici correttamente
+  assetsInclude: ['**/*.js', '**/*.svg']
 }) 

@@ -1,0 +1,56 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/d3.html",
+      "destination": "/chat.html"
+    },
+    {
+      "source": "/d3.js",
+      "destination": "/d3.js"
+    },
+    {
+      "source": "/public/d3.js",
+      "destination": "/public/d3.js"
+    },
+    {
+      "source": "/logo.svg",
+      "destination": "/logo.svg"
+    },
+    {
+      "source": "/public/logo.svg",
+      "destination": "/public/logo.svg"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/d3.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    },
+    {
+      "source": "/public/d3.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    }
+  ]
+} 
