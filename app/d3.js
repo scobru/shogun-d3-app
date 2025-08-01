@@ -1,62 +1,145 @@
 // Wrapper per rendere Shogun-D3 utilizzabile in un browser
 // Basato sul codice originale da /src/index.ts
 
+// ✅ AGGIORNATO: Import ShogunCore (deve essere caricato prima di questo script)
+// Assicurati che shogun-core sia caricato tramite script tag nell'HTML
+
 // Definisci i peer Gun prima di inizializzare
-const GUN_PEERS = ["http://localhost:8765/gun"];
+const GUN_PEERS = ["https://peer.wallie.io/gun","wss://ruling-mastodon-improved.ngrok-free.app/gun"];
 
 // Aumentiamo timeout iniziale di Gun
 const GUN_TIMEOUT = 10000; // 10 secondi invece dei 5 standard
 
-// Crea un'istanza di ShogunCore
-const shogunInstance = initShogunBrowser({
-  peers: GUN_PEERS,
-  gundb: {
-    peers: GUN_PEERS,
-    localStorage: false,
-    radisk: false,
-    axe: false,
-    multicast: false,
-    wait: GUN_TIMEOUT,
-    authToken: "myMetadataToken123",
-  },
-  // Abilita esplicitamente i plugin necessari
-  metamask: {
-    enabled: true,
-  },
-  webauthn: {
-    enabled: false, // Abilita solo se necessario
-  },
-  stealth: {
-    enabled: true,
-  },
-  did: {
-    enabled: true,
-  },
+// ✅ AGGIORNATO: Inizializzazione asincrona di ShogunCore
+let shogunInstance = null;
+
+// ✅ DEBUG: Log immediato per verificare il caricamento
+console.log("🔍 d3.js loaded - checking ShogunCore availability...");
+console.log("🔍 typeof ShogunCore:", typeof ShogunCore);
+console.log("🔍 window.ShogunCore:", typeof window.ShogunCore);
+
+// Funzione di inizializzazione asincrona
+async function initializeShogun() {
+  console.log("🔄 DEBUGGING ShogunCore...");
+  
+  // DEBUG: Controlla tutti i possibili riferimenti a ShogunCore
+  console.log("typeof ShogunCore:", typeof ShogunCore);
+  console.log("typeof window.ShogunCore:", typeof window.ShogunCore);
+  console.log("ShogunCore:", ShogunCore);
+  
+  let ShogunClass = null;
+  
+  // ✅ CORRETTO: Usa la struttura che vediamo nel console
+  if (typeof ShogunCore === 'object') {
+    console.log("ShogunCore keys:", Object.keys(ShogunCore));
+    
+    // Prova prima ShogunCore.ShogunCore poi ShogunCore.default
+    if (typeof ShogunCore.ShogunCore === 'function') {
+      ShogunClass = ShogunCore.ShogunCore;
+      console.log("✅ Using ShogunCore.ShogunCore");
+    } else if (typeof ShogunCore.default === 'function') {
+      ShogunClass = ShogunCore.default;
+      console.log("✅ Using ShogunCore.default");
+    }
+  } else if (typeof ShogunCore === 'function') {
+    ShogunClass = ShogunCore;
+    console.log("✅ Using ShogunCore directly");
+  }
+  
+  // Se abbiamo trovato la classe, proviamo a inizializzare
+  if (ShogunClass) {
+    try {
+      console.log("🔧 Creating ShogunCore instance...");
+      
+      const config = {
+        peers: GUN_PEERS,
+        scope: "shogun",
+        web3: { 
+          enabled: true 
+        },
+        webauthn: {
+          enabled: true,
+          rpName: "Shogun-D3",
+          rpId: "localhost",
+        },
+        plugins: {
+          autoRegister: [],
+        },
+        timeouts: {
+          login: 30000,
+          signup: 30000,
+          operation: 60000,
+        },
+      };
+
+      console.log("🔧 Config:", config);
+      
+      shogunInstance = new ShogunClass(config);
+      console.log("✅ ShogunCore instance created");
+
+      console.log("⏳ Initializing ShogunCore...");
+      await shogunInstance.initialize();
+      console.log("✅ ShogunCore initialized successfully!");
+
+      window.gun = shogunInstance.db.gun;
+      window.SEA = Gun.SEA;
+      
+      console.log("🎉 ShogunCore setup completed!");
+      return shogunInstance;
+      
+    } catch (error) {
+      console.error("❌ ShogunCore initialization failed:", error);
+    }
+  }
+  
+  // Fallback a Gun diretto
+  console.warn("🔄 Using Gun fallback");
+  try {
+    window.gun = Gun({
+      peers: GUN_PEERS,
+      localStorage: false,
+      radisk: false,
+      axe: false,
+      multicast: false,
+    });
+    window.SEA = Gun.SEA;
+    console.log("✅ Gun fallback successful");
+  } catch (gunError) {
+    console.error("❌ Gun fallback failed:", gunError);
+  }
+  
+  return null;
+}
+
+// ✅ DEBUG: Log prima dell'inizializzazione
+console.log("🚀 Starting shogun initialization promise...");
+
+// Inizializzazione immediata
+const shogunPromise = initializeShogun();
+
+// ✅ DEBUG: Monitora lo stato della promessa
+shogunPromise.then((result) => {
+  console.log("🎯 Shogun promise resolved with:", !!result);
+  if (result) {
+    console.log("✅ ShogunCore is ready for use");
+  } else {
+    console.warn("⚠️ ShogunCore initialization failed, using fallback");
+  }
+}).catch((error) => {
+  console.error("💥 Shogun promise rejected:", error);
 });
 
-// Recupera l'istanza di Gun da ShogunCore
-window.gun = shogunInstance.gun;
-window.SEA = Gun.SEA;
-
 // Monitoraggio dello stato dei peer di Gun
-window.gun.on("hi", (peer) => {
+window.gun?.on("hi", (peer) => {
   console.log(`Gun peer connesso: ${peer}`);
 });
 
-window.gun.on("bye", (peer) => {
+window.gun?.on("bye", (peer) => {
   console.log(`Gun peer disconnesso: ${peer}`);
 });
 
 // Monitoraggio stato sincronizzazione - modifica per ridurre il rumore nei log
-// Commentiamo questa parte o imponiamo un livello di log più alto
-/*
-  window.gun.on("put", function(at) {
-    console.log(`Gun PUT operazione sincronizzata:`, at.put);
-  });
-  */
-
-// Oppure, utilizziamo un log condizionale che mostra solo informazioni essenziali
-window.gun.on("put", function (at) {
+window.gun?.on("put", function (at) {
   // Verificare se è attivo il debug verbose prima di mostrare i log dettagliati
   if (window.d3 && window.d3.debug && window.d3.debug.logLevel === "verbose") {
     console.log(`Gun PUT operazione sincronizzata:`, at.put);
@@ -65,8 +148,16 @@ window.gun.on("put", function (at) {
 
 // Creazione del namespace Shogun-D3 basato su ShogunCore
 window.d3 = {
-  // Riferiimento a ShogunCore
-  shogun: shogunInstance,
+  // ✅ AGGIORNATO: Riferimento a ShogunCore (sarà disponibile dopo l'inizializzazione)
+  shogun: null,
+  
+  // ✅ NUOVO: Metodo per attendere l'inizializzazione
+  waitForInit: async function() {
+    if (!this.shogun) {
+      this.shogun = await shogunPromise;
+    }
+    return this.shogun;
+  },
 
   // Funzioni di base
   getProvider: async function () {
@@ -148,97 +239,228 @@ window.d3 = {
     },
   },
 
-  // FUNZIONE AGGIORNATA: Connessione wallet tramite ShogunCore
+  // ✅ AGGIORNATO: Connessione wallet tramite MetaMask semplificata
   connectWithMetaMask: async function () {
     try {
+      console.log("🔄 Starting MetaMask connection...");
+      
+      // ✅ NUOVO: Attendi l'inizializzazione 
+      await this.waitForInit();
+      
       const provider = await this.getProvider();
-      if (!provider) return null;
-
-      const address = await provider.getSigner().getAddress();
-
-      // Prima tenta login, se fallisce esegue signup
-      let authResult = await this.shogun.loginWithMetaMask(address);
-
-      if (!authResult.success) {
-        console.log("Utente non trovato, eseguo registrazione con MetaMask");
-
-        // Utilizziamo il nuovo sistema di plugin se disponibile
-        const metamaskPlugin = this.shogun.getPlugin("metamask");
-        if (metamaskPlugin) {
-          authResult = await metamaskPlugin.signUp(address);
-        } else {
-          // Fallback al vecchio metodo
-          authResult = await this.shogun.signUpWithMetaMask(address);
-        }
-
-        if (!authResult.success) {
-          throw new Error(
-            `Errore durante l'autenticazione: ${authResult.error}`
-          );
-        }
+      if (!provider) {
+        console.error("❌ MetaMask provider not available");
+        return null;
       }
 
-      console.log("Autenticazione completata con ShogunCore:", authResult);
+      console.log("✅ MetaMask provider ready, getting address...");
+      const address = await provider.getSigner().getAddress();
+      console.log("✅ Got address:", address);
 
-      // Memorizza l'indirizzo utente corrente
-      window.currentUserAddress = address;
-
-      // Ottiene il keypair Gun gestito da ShogunCore
-      const gunUser = this.shogun.gun.user();
-      window.gunKeyPair = gunUser._.sea;
-
-      // Registra anche il keypair pubblico nel formato usato dal wrapper
-      this.registerKeypair(address, {
-        pub: window.gunKeyPair.pub,
-        epub: window.gunKeyPair.epub,
+      // Se abbiamo ShogunCore, usa i plugin
+      if (this.shogun) {
+        console.log("🔌 Using ShogunCore Web3 plugin...");
+        const web3Plugin = this.shogun.getPlugin("web3");
+        if (web3Plugin) {
+          let authResult = await web3Plugin.login(address);
+          
+          if (!authResult.success) {
+            console.log("⚠️ User not found, attempting registration with MetaMask");
+            authResult = await web3Plugin.signUp(address);
+          }
+          
+          if (authResult.success) {
+            console.log("✅ Authentication completed with ShogunCore:", authResult);
+            window.currentUserAddress = address;
+            const gunUser = this.shogun.db.user;
+            window.gunKeyPair = gunUser._.sea;
+            
+            window.d3.registerKeypair(address, {
+              pub: window.gunKeyPair.pub,
+              epub: window.gunKeyPair.epub,
+            });
+            
+            return { address, keypair: window.gunKeyPair };
+          }
+        }
+      }
+      
+      // ✅ FALLBACK: Usa MetaMask diretto con Gun
+      console.log("🔄 Using MetaMask direct authentication with Gun...");
+      
+      // Crea una signature per autenticare l'utente
+      const message = `Shogun-D3 Authentication - ${Date.now()}`;
+      const signature = await provider.getSigner().signMessage(message);
+      
+      // Genera un keypair da gun usando la signature come seed
+      const hash = await Gun.SEA.work(signature, null, null, {name: 'SHA-256'});
+      const keypair = await Gun.SEA.pair();
+      
+      // Autentica con Gun usando l'address come username
+      const username = address.toLowerCase();
+      const password = hash;
+      
+      console.log("🔐 Authenticating with Gun...");
+      const user = window.gun.user();
+      
+      return new Promise((resolve, reject) => {
+        user.auth(username, password, (ack) => {
+          if (ack.err) {
+            console.log("📝 User not found, creating new user...");
+            user.create(username, password, (createAck) => {
+              if (createAck.err) {
+                console.error("❌ Failed to create user:", createAck.err);
+                reject(new Error(`Failed to create user: ${createAck.err}`));
+              } else {
+                console.log("✅ User created, logging in...");
+                user.auth(username, password, (authAck) => {
+                  if (authAck.err) {
+                    reject(new Error(`Failed to login after creation: ${authAck.err}`));
+                  } else {
+                    console.log("✅ Authentication successful");
+                    window.currentUserAddress = address;
+                    window.gunKeyPair = user._.sea;
+                    
+                    window.d3.registerKeypair(address, {
+                      pub: window.gunKeyPair.pub,
+                      epub: window.gunKeyPair.epub,
+                    });
+                    
+                    resolve({ address, keypair: window.gunKeyPair });
+                  }
+                });
+              }
+            });
+          } else {
+            console.log("✅ User authenticated successfully");
+            window.currentUserAddress = address;
+            window.gunKeyPair = user._.sea;
+            
+            window.d3.registerKeypair(address, {
+              pub: window.gunKeyPair.pub,
+              epub: window.gunKeyPair.epub,
+            });
+            
+            resolve({ address, keypair: window.gunKeyPair });
+          }
+        });
       });
-
-      return {
-        address,
-        keypair: window.gunKeyPair,
-      };
+      
     } catch (error) {
-      console.error("Errore durante la connessione con MetaMask:", error);
+      console.error("❌ Error connecting to MetaMask:", error);
       throw error;
     }
   },
 
-  // FUNZIONE AGGIORNATA: backup keypair utilizzando il nuovo sistema
+  // ✅ AGGIORNATO: backup keypair utilizzando il nuovo sistema
   backupKeypair: async function (password) {
-    if (!this.shogun.isLoggedIn()) {
-      throw new Error("Devi essere autenticato per eseguire un backup");
-    }
-
-    // Verifica se esistono metodi specifici nei plugin
-    const metamaskPlugin = this.shogun.getPlugin("metamask");
-    if (metamaskPlugin && metamaskPlugin.exportKeyPair) {
-      return metamaskPlugin.exportKeyPair(password);
-    }
-
-    // Fallback al metodo tradizionale
-    const backupData = await this.shogun.exportGunPair(password);
-    return backupData;
-  },
-
-  // NUOVA FUNZIONE: ripristina keypair
-  restoreKeypair: async function (backupData, password) {
-    const result = await this.shogun.importGunPair(backupData, password);
-
-    if (result) {
-      // Aggiorna gunKeyPair globale
-      const gunUser = this.shogun.gun.user();
-      window.gunKeyPair = gunUser._.sea;
-
-      // Registra anche il keypair pubblico
-      if (window.currentUserAddress) {
-        await this.registerKeypair(window.currentUserAddress, {
-          pub: window.gunKeyPair.pub,
-          epub: window.gunKeyPair.epub,
-        });
+    // Verifica se abbiamo ShogunCore disponibile
+    if (this.shogun && this.shogun.isLoggedIn && this.shogun.isLoggedIn()) {
+      try {
+        // ✅ NUOVO: Usa il metodo di esportazione standard
+        const backupData = this.shogun.exportPair();
+        return backupData;
+      } catch (error) {
+        console.warn("ShogunCore backup failed, using fallback:", error);
       }
     }
 
-    return result;
+    // Fallback: crea backup manuale
+    if (!window.gunKeyPair) {
+      throw new Error("No keypair available to backup");
+    }
+
+    const backup = {
+      version: "1.0",
+      timestamp: Date.now(),
+      address: window.currentUserAddress,
+      keypair: {
+        pub: window.gunKeyPair.pub,
+        priv: window.gunKeyPair.priv,
+        epub: window.gunKeyPair.epub,
+        epriv: window.gunKeyPair.epriv
+      }
+    };
+
+    if (password) {
+      // Simple encryption with SEA
+      const encrypted = await Gun.SEA.encrypt(JSON.stringify(backup.keypair), password);
+      backup.keypair = { encrypted: encrypted };
+      backup.encrypted = true;
+    }
+
+    return backup;
+  },
+
+  // ✅ AGGIORNATO: ripristina keypair
+  restoreKeypair: async function (backupData, password) {
+    // Prova prima con ShogunCore se disponibile
+    if (this.shogun && this.shogun.loginWithPair) {
+      try {
+        const result = await this.shogun.loginWithPair(backupData);
+
+        if (result && result.success) {
+          // Aggiorna gunKeyPair globale
+          const gunUser = this.shogun.db.user;
+          window.gunKeyPair = gunUser._.sea;
+
+          // Registra anche il keypair pubblico
+          if (window.currentUserAddress) {
+            await this.registerKeypair(window.currentUserAddress, {
+              pub: window.gunKeyPair.pub,
+              epub: window.gunKeyPair.epub,
+            });
+          }
+
+          return true;
+        }
+      } catch (error) {
+        console.warn("ShogunCore restore failed, using fallback:", error);
+      }
+    }
+
+    // Fallback: ripristino manuale
+    try {
+      let keypairData = backupData.keypair;
+
+      if (backupData.encrypted && keypairData.encrypted) {
+        if (!password) {
+          throw new Error("This backup is encrypted. Please provide the password.");
+        }
+
+        try {
+          const decrypted = await Gun.SEA.decrypt(keypairData.encrypted, password);
+          keypairData = JSON.parse(decrypted);
+        } catch (error) {
+          throw new Error("Failed to decrypt backup. Wrong password?");
+        }
+      }
+
+      if (!keypairData.pub || !keypairData.priv || !keypairData.epub || !keypairData.epriv) {
+        throw new Error("Invalid keypair data in backup");
+      }
+
+      // Set the restored keypair
+      window.gunKeyPair = keypairData;
+
+      // Update address if available in backup
+      if (backupData.address) {
+        window.currentUserAddress = backupData.address;
+      }
+
+      // Register the public part
+      if (window.currentUserAddress) {
+        await this.registerKeypair(window.currentUserAddress, {
+          pub: keypairData.pub,
+          epub: keypairData.epub,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error restoring keypair:", error);
+      throw error;
+    }
   },
 
   // Funzioni di gestione delle chiavi
@@ -1584,76 +1806,64 @@ window.d3 = {
     },
   },
 
-  // Esponiamo metodi di ShogunCore più utili
+  // ✅ AGGIORNATO: Logout per compatibilità con la nuova architettura
   logout: function () {
     this.shogun.logout();
     window.gunKeyPair = null;
     window.currentUserAddress = null;
   },
 
-  // FUNZIONE AGGIORNATA: isLoggedIn per compatibilità con la nuova architettura
+  // ✅ AGGIORNATO: isLoggedIn per compatibilità con la nuova architettura
   isLoggedIn: function () {
     return this.shogun.isLoggedIn();
   },
 
-  // FUNZIONE AGGIUNTA: Supporto per verificare plugin attivi
+  // ✅ AGGIORNATO: Supporto per verificare plugin attivi
   getActivePlugins: function () {
-    if (this.shogun.getRegisteredPlugins) {
-      return this.shogun.getRegisteredPlugins();
-    }
-
-    // Versione compatibilità per vecchia API
-    return {
-      metamask: !!this.shogun.metamask,
-      webauthn: !!this.shogun.webauthn,
-      stealth: !!this.shogun.stealth,
-      did: !!this.shogun.did,
-    };
+    const plugins = {};
+    
+    // Verifica i plugin disponibili
+    plugins.web3 = !!this.shogun.getPlugin("web3");
+    plugins.webauthn = !!this.shogun.getPlugin("webauthn");
+    plugins.nostr = !!this.shogun.getPlugin("nostr");
+    plugins.oauth = !!this.shogun.getPlugin("oauth");
+    
+    return plugins;
   },
 };
 
-// Inizializza il debug e Gun automaticamente
-(function () {
+// ✅ AGGIORNATO: Inizializza il debug e Gun automaticamente
+(async function () {
   // Imposta il livello di log predefinito
-  window.d3.debug.setLogLevel("error"); // Cambiato da "info" a "error" per ridurre i log
+  window.d3.debug.setLogLevel("error");
 
-  // Inizializza Gun se non è stato già fatto
-  if (!window.gun) {
-    try {
-      window.gun = Gun({
-        localStorage: false,
-        radisk: false,
-        peers: GUN_PEERS,
-        axe: false,
-        multicast: false,
-        wait: 100, // Riduco il timeout per aumentare le prestazioni
-        retrieve: 5, // Valore più basso per velocizzare la risposta
-      });
-    } catch (error) {
-      console.error("Errore nell'inizializzazione di Gun:", error);
-    }
+  // ✅ NUOVO: Attendi l'inizializzazione di ShogunCore
+  try {
+    const shogunResult = await window.d3.waitForInit();
+    console.log("Shogun-D3 initialization completed");
+    
+    // ✅ IMPORTANTE: Aggiorna i riferimenti dopo l'inizializzazione
+    window.d3.gun = window.gun;
+    window.d3.SEA = window.SEA;
+    
+    // ✅ AGGIORNA: Assegna shogun al namespace
+    window.d3.shogun = shogunResult;
+    
+  } catch (error) {
+    console.error("Failed to initialize Shogun-D3:", error);
   }
 
   // Memorizza l'indirizzo dell'utente corrente quando disponibile
   window.currentUserAddress = null;
-  window.d3
-    .getProvider()
-    .then((provider) => {
-      if (provider) {
-        provider
-          .getSigner()
-          .getAddress()
-          .then((address) => {
-            window.currentUserAddress = address;
-          })
-          .catch(() => {
-            // Ignora errori
-          });
-      }
-    })
-    .catch(() => {
-      // Ignora errori
-    });
+  try {
+    const provider = await window.d3.getProvider();
+    if (provider) {
+      const address = await provider.getSigner().getAddress();
+      window.currentUserAddress = address;
+    }
+  } catch (error) {
+    // Ignora errori (MetaMask potrebbe non essere connesso)
+  }
 })();
 
 // Aggiorno la funzione receiveMessage per tracciare gli ascolti

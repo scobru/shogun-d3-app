@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shogun-D3 Chat</title>
+    <style>
+        :root {
+            /* Light theme */
+            --primary-color-light: #2D3436;
+            --secondary-color-light: #636E72;
+            --accent-color-light: #00B894;
+            --bg-color-light: #FFFFFF;
+            --light-gray-light: #F1F2F6;
+            --message-bg-light: #F8F9FA;
+            --shadow-light: rgba(0, 0, 0, 0.05);
+            
+            /* Dark theme */
+            --primary-color-dark: #FFFFFF;
+            --secondary-color-dark: #CBD5E0;
+            --accent-color-dark: #00D1A1;
+            --bg-color-dark: #1A202C;
+            --light-gray-dark: #2D3748;
+            --message-bg-dark: #2D3748;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+            
+            /* Common variables */
+            --border-radius: 12px;
+            --spacing: 12px;
+            --transition: all 0.2s ease;
+            
+            /* Default theme (light) */
+            --primary-color: var(--primary-color-light);
+            --secondary-color: var(--secondary-color-light);
+            --accent-color: var(--accent-color-light);
+            --bg-color: var(--bg-color-light);
+            --light-gray: var(--light-gray-light);
+            --message-bg: var(--message-bg-light);
+            --shadow: var(--shadow-light);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: var(--primary-color-dark);
+            --secondary-color: var(--secondary-color-dark);
+            --accent-color: var(--accent-color-dark);
+            --bg-color: var(--bg-color-dark);
+            --light-gray: var(--light-gray-dark);
+            --message-bg: var(--message-bg-dark);
+            --shadow: var(--shadow-dark);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f3e8ff, #ddd6fe, #c7d2fe);
+            color: var(--primary-color);
+            line-height: 1.6;
+            transition: var(--transition);
+            min-height: 100vh;
+        }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            height: 100vh;
+            padding: 0;
+            background: transparent;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 0;
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(26, 32, 44, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header .flex {
+            display: flex;
+        }
+
+        .header .items-center {
+            align-items: center;
+        }
+
+        .header .space-x-3 > * + * {
+            margin-left: 12px;
+        }
+
+        .header h1 {
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+        }
+
+        .theme-toggle {
+            background: var(--light-gray);
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--accent-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .info {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing);
+            border-radius: 16px;
+            margin-bottom: var(--spacing);
+            font-size: 0.95rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+        }
+
+        .connect-section {
+            text-align: center;
+            margin-bottom: 0;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 0;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            min-height: 60px;
+            align-items: center;
+        }
+
+        [data-theme="dark"] .connect-section {
+            background: rgba(26, 32, 44, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .connect-section .flex {
+            display: flex;
+        }
+
+        .connect-section .flex-col {
+            flex-direction: column;
+        }
+
+        .connect-section .items-center {
+            align-items: center;
+        }
+
+        .connect-section .justify-center {
+            justify-content: center;
+        }
+
+        .connect-section .space-y-4 > * + * {
+            margin-top: 12px;
+        }
+
+        .connect-section .space-x-2 > * + * {
+            margin-left: 6px;
+        }
+
+        .connect-section .gap-3 {
+            gap: 8px;
+        }
+
+        .connect-section .flex-wrap {
+            flex-wrap: wrap;
+        }
+
+        /* Stili per i pulsanti discreti come Signal */
+        .connect-section button {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: #8B5CF6;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            transform: scale(1);
+            box-shadow: none;
+            opacity: 0.8;
+        }
+
+        .connect-section button:hover {
+            transform: scale(1.02);
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+            opacity: 1;
+        }
+
+        .connect-section button:nth-child(2) {
+            background: rgba(107, 114, 128, 0.1);
+            border-color: rgba(107, 114, 128, 0.2);
+            color: #6B7280;
+        }
+
+        .connect-section button:nth-child(2):hover {
+            background: rgba(107, 114, 128, 0.15);
+            border-color: rgba(107, 114, 128, 0.3);
+        }
+
+        .connect-section button:nth-child(3) {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+            color: #22C55E;
+        }
+
+        .connect-section button:nth-child(3):hover {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .connect-section button:nth-child(4) {
+            background: rgba(249, 115, 22, 0.1);
+            border-color: rgba(249, 115, 22, 0.2);
+            color: #F97316;
+        }
+
+        .connect-section button:nth-child(4):hover {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: rgba(249, 115, 22, 0.3);
+        }
+
+        /* Nascondi i bottoni quando connesso */
+        .connect-section.connected {
+            min-height: 40px;
+            padding: 8px 16px;
+        }
+
+        .connect-section.connected .button-group {
+            display: none;
+        }
+
+        .connect-section.connected .status-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .connect-section .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .connect-section .status-group {
+            display: none;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: var(--transition);
+            min-width: 150px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .chat-section {
+            display: none;
+            height: calc(100vh - 200px);
+        }
+
+        .chat-wrapper {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 0;
+            border-radius: 0;
+            margin-top: 0;
+            border: none;
+            box-shadow: none;
+        }
+
+        [data-theme="dark"] .chat-wrapper {
+            background: rgba(26, 32, 44, 0.9);
+        }
+
+        .conversations-list {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 0;
+            overflow-y: auto;
+            padding: 16px;
+            height: 100%;
+            border-right: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        [data-theme="dark"] .conversations-list {
+            background: rgba(45, 55, 72, 0.8);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .conversation-item {
+            padding: 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 6px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--light-gray);
+        }
+
+        .conversation-item:hover {
+            transform: translateX(2px);
+            border-color: var(--accent-color);
+        }
+
+        .conversation-item.active {
+            background-color: var(--accent-color);
+            color: white;
+            transform: translateX(2px);
+            border-color: transparent;
+        }
+
+        .conversation-item .address {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--primary-color);
+        }
+
+        .conversation-item .message-count {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            color: var(--secondary-color);
+        }
+
+        .conversation-item .last-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 4px;
+            color: var(--secondary-color);
+        }
+
+        .messages {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 0;
+            overflow: hidden;
+            border: none;
+            box-shadow: none;
+        }
+
+        [data-theme="dark"] .messages {
+            background: rgba(26, 32, 44, 0.95);
+        }
+
+        .messages-header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        [data-theme="dark"] .messages-header {
+            background: rgba(26, 32, 44, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .messages-header .window-controls {
+            display: flex;
+            gap: 6px;
+            margin-right: 12px;
+        }
+
+        .messages-header .window-control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .messages-header .window-control.close {
+            background-color: #FF5F56;
+        }
+
+        .messages-header .window-control.minimize {
+            background-color: #FFBD2E;
+        }
+
+        .messages-header .window-control.maximize {
+            background-color: #27C93F;
+        }
+
+        .messages-header .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.95rem;
+        }
+
+        .messages-header .chat-title img {
+            width: 16px;
+            height: 16px;
+        }
+
+        .messages-header .flex-1 {
+            flex: 1;
+        }
+
+        .messages-header input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--primary-color);
+        }
+
+        [data-theme="dark"] .messages-header input {
+            background: rgba(45, 55, 72, 0.8);
+            border-color: #4A5568;
+            color: var(--primary-color);
+        }
+
+        .messages-header input:focus {
+            outline: none;
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .messages-container {
+            padding: 16px;
+            background: transparent;
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(100% - 140px);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border-radius: 16px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .message.sent {
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: #FFFFFF;
+            margin-left: auto;
+            border-bottom-right-radius: 6px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+
+        .message.received {
+            background-color: #F8F9FA;
+            color: #374151;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] .message.received {
+            background-color: #2D3748;
+            color: #E2E8F0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .message .meta {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .message.sent .meta {
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: none;
+        }
+
+        .message.received .meta {
+            color: #6B7280;
+        }
+
+        [data-theme="dark"] .message.received .meta {
+            color: #A0AEC0;
+        }
+
+        .input-area {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .input-area {
+            background: rgba(26, 32, 44, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--light-gray);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            color: var(--primary-color);
+            transition: var(--transition);
+        }
+
+        [data-theme="dark"] input {
+            background-color: rgba(45, 55, 72, 0.8);
+            border-color: #4A5568;
+            color: var(--primary-color);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(0, 136, 148, 0.2);
+        }
+
+        #recipientAddress {
+            font-family: monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #8B5CF6;
+            animation: typingPulse 1.5s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        .connection-status {
+            margin-top: var(--spacing);
+            padding: 10px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online {
+            background-color: var(--accent-color);
+            box-shadow: 0 0 12px var(--accent-color);
+        }
+
+        .status-indicator.offline {
+            background-color: #FF6B6B;
+            box-shadow: 0 0 12px #FF6B6B;
+        }
+
+        .status-indicator.connecting {
+            background-color: #FFA502;
+            box-shadow: 0 0 12px #FFA502;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .wallet-info {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing);
+            border-radius: 12px;
+            margin-top: var(--spacing);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: left;
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
+        }
+
+        .wallet-info p {
+            margin-bottom: 8px;
+        }
+
+        .wallet-info code {
+            background-color: var(--light-gray);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .wallet-info .active {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .chat-wrapper {
+                grid-template-columns: 1fr;
+                height: 100%;
+            }
+
+            .conversations-list {
+                display: none;
+            }
+
+            .container {
+                padding: 0;
+            }
+
+            .header {
+                padding: 12px 16px;
+            }
+
+            .connect-section {
+                padding: 16px;
+            }
+
+            .chat-section {
+                height: calc(100vh - 180px);
+            }
+        }
+
+        /* Info section migliorata */
+        .info .flex {
+            display: flex;
+        }
+
+        .info .items-center {
+            align-items: center;
+        }
+
+        .info .space-x-2 > * + * {
+            margin-left: 8px;
+        }
+
+        .info .mb-3 {
+            margin-bottom: 12px;
+        }
+
+        .info .h-2 {
+            height: 8px;
+        }
+
+        .info .w-2 {
+            width: 8px;
+        }
+
+        .info .rounded-full {
+            border-radius: 50%;
+        }
+
+        .info span {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .info ul {
+            margin-left: 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .info li {
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        /* Utility classes per le immagini */
+        .h-6 {
+            height: 24px;
+        }
+
+        .w-6 {
+            width: 24px;
+        }
+
+        .h-8 {
+            height: 32px;
+        }
+
+        .w-8 {
+            width: 32px;
+        }
+
+        .h-12 {
+            height: 48px;
+        }
+
+        .w-12 {
+            width: 48px;
+        }
+
+        /* Assicura che le immagini mantengano le proporzioni */
+        img {
+            object-fit: contain;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .close {
+            color: var(--secondary-color);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .close:hover {
+            color: var(--primary-color);
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .modal-body input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            font-family: monospace;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-footer button {
+            min-width: 100px;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--primary-color);
+        }
+
+        .backup-info {
+            background-color: var(--light-gray);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .warning-text {
+            color: #FF6B6B;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="flex items-center space-x-3">
+                <img src="logo.svg" alt="Shogun Logo" class="h-12 w-12" />
+                <div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        Shogun-D3
+                    </h1>
+                    <p class="text-sm text-gray-600">Decentralized Chat</p>
+                </div>
+            </div>
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+        </div>
+        
+        <div id="wallet-section" class="connect-section">
+            <div class="button-group">
+                <div class="flex items-center space-x-2 mb-4">
+                    <img src="logo.svg" alt="Shogun" class="h-8 w-8" />
+                    <span class="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        Connect to Shogun Network
+                    </span>
+                </div>
+                
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <button id="connectWallet" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                        🔗 Connect Wallet
+                    </button>
+                    <button id="refreshChat" class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                        🔄 Refresh Chat
+                    </button>
+                    <button id="backupKeypair" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg" style="display: none;">
+                        💾 Backup Keypair
+                    </button>
+                    <button id="restoreKeypair" class="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                        📂 Restore Keypair
+                    </button>
+                </div>
+            </div>
+            
+            <div class="status-group">
+                <div id="walletInfo" class="wallet-info" style="margin: 0; padding: 8px 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 20px; color: #22C55E; font-size: 0.9rem;"></div>
+                
+                <div class="connection-status" id="gunStatus" style="margin: 0; padding: 8px 16px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 20px; color: #8B5CF6; font-size: 0.9rem;">
+                    <span class="status-indicator connecting"></span>
+                    <span>Connecting to Gun Network...</span>
+                </div>
+                
+                <div style="font-size: 0.85rem;">
+                    <div class="flex items-center justify-center space-x-2">
+                        <span class="text-gray-600">Debug:</span>
+                        <select id="logLevel" class="px-3 py-1 rounded-md bg-white border border-gray-300 text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                            <option value="none">None</option>
+                            <option value="error">Error</option>
+                            <option value="warn">Warning</option>
+                            <option value="info" selected>Info</option>
+                            <option value="debug">Debug</option>
+                            <option value="verbose">Verbose</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="chatSection" class="chat-section">
+            <div class="chat-wrapper">
+                <div class="conversations-list" id="conversationsList">
+                    <!-- Conversations will appear here -->
+                </div>
+                <div class="messages">
+                    <div class="messages-header">
+                        <div class="window-controls">
+                            <div class="window-control close"></div>
+                            <div class="window-control minimize"></div>
+                            <div class="window-control maximize"></div>
+                        </div>
+                        <div class="chat-title">
+                            <img src="logo.svg" alt="Shogun" />
+                            <span>Shogun-D3 Chat</span>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" id="recipientAddress" placeholder="Enter recipient's ETH address (0x...)" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono">
+                        </div>
+                    </div>
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will appear here -->
+                    </div>
+                    <div class="input-area">
+                        <input type="text" id="messageInput" placeholder="Type a message...">
+                        <button id="sendMessage">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Keypair Modal -->
+    <div id="backupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💾 Backup Keypair</h2>
+                <span class="close" onclick="closeBackupModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="backup-info">
+                    <strong>⚠️ Important:</strong> This backup contains your private keys. Store it securely and never share it with anyone.
+                </div>
+                
+                <label for="backupPassword">Password (optional, but recommended):</label>
+                <input type="password" id="backupPassword" placeholder="Enter a strong password to encrypt your backup">
+                
+                <label for="backupData">Backup Data:</label>
+                <textarea id="backupData" readonly placeholder="Your backup data will appear here..."></textarea>
+                
+                <div style="text-align: center; margin-top: 10px;">
+                    <button type="button" onclick="downloadBackup()" style="background: linear-gradient(135deg, #10B981, #059669); margin-right: 10px;">
+                        📥 Download as File
+                    </button>
+                    <button type="button" onclick="copyBackupToClipboard()" style="background: linear-gradient(135deg, #6366F1, #4F46E5);">
+                        📋 Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeBackupModal()">Close</button>
+                <button type="button" onclick="generateBackup()">Create Backup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Keypair Modal -->
+    <div id="restoreModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📂 Restore Keypair</h2>
+                <span class="close" onclick="closeRestoreModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="warning-text">
+                    ⚠️ Warning: Restoring a keypair will replace your current keypair. Make sure you have a backup first!
+                </div>
+                
+                <label for="restoreData">Backup Data:</label>
+                <textarea id="restoreData" placeholder="Paste your backup data here..."></textarea>
+                
+                <label for="restorePassword">Password (if you used one during backup):</label>
+                <input type="password" id="restorePassword" placeholder="Enter the password used for encryption">
+                
+                <div style="text-align: center; margin-top: 10px;">
+                    <input type="file" id="restoreFile" accept=".json,.txt" style="display: none;" onchange="loadBackupFile(event)">
+                    <button type="button" onclick="document.getElementById('restoreFile').click()" style="background: linear-gradient(135deg, #8B5CF6, #7C3AED);">
+                        📁 Load from File
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeRestoreModal()">Cancel</button>
+                <button type="button" onclick="performRestore()">Restore Keypair</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+    <!-- ✅ AGGIORNATO: Carica ShogunCore prima di d3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/shogun-core@^1.6.15/dist/browser/shogun-core.js"></script>
+    <script src="d3.js"></script>
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Set initial theme based on system preference
+        if (prefersDarkScheme.matches) {
+            document.body.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.body.removeAttribute('data-theme');
+                themeToggle.textContent = '🌙';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+            }
+        });
+
+        // Check if d3 and d3.debug exist, otherwise initialize
+        if (!window.d3) {
+            console.error("Error: d3 object not loaded correctly");
+            window.d3 = {};
+        }
+        
+        if (!window.d3.debug) {
+            console.warn("Warning: d3.debug object not found, initializing");
+            window.d3.debug = {};
+        }
+        
+        // Check if testGunConnection exists, otherwise create it
+        if (!window.d3.debug.testGunConnection) {
+            console.warn("Warning: testGunConnection function not found, creating");
+            window.d3.debug.testGunConnection = async function() {
+                try {
+                    const startTime = Date.now();
+                    
+                    // Test Gun connection with a simple ping
+                    const result = await new Promise((resolve) => {
+                        const timeoutId = setTimeout(() => {
+                            resolve({
+                                success: false,
+                                message: "Connection test timeout"
+                            });
+                        }, 5000);
+                        
+                        // Try to read data from Gun
+                        window.gun.get("connection_test").once((data) => {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                success: true
+                            });
+                        });
+                    });
+                    
+                    const endTime = Date.now();
+                    const latency = endTime - startTime;
+                    
+                    return {
+                        ...result,
+                        latency
+                    };
+                } catch (error) {
+                    return {
+                        success: false,
+                        message: error.message || "Error during connection test"
+                    };
+                }
+            };
+        }
+        
+        // DOM Elements
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const walletInfoEl = document.getElementById('walletInfo');
+        const chatSection = document.getElementById('chatSection');
+        const recipientAddressInput = document.getElementById('recipientAddress');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessage');
+        const keyPairStatusElement = document.createElement('div');
+        walletInfoEl.appendChild(keyPairStatusElement);
+
+        // Global variables
+        let userAddress = null;
+        let provider = null;
+        let wallet = null;
+        let gunKeyPair = null;
+        let activeConversations = new Set();
+        let processedMessages = new Set();
+        let chatMessages = {};
+        
+        // LocalStorage functions
+        const saveMessagesToLocalStorage = () => {
+            try {
+                localStorage.setItem('shogun_d3_chat_messages', JSON.stringify(chatMessages));
+                console.log('Messages saved to localStorage');
+            } catch (error) {
+                console.error('Error saving messages to localStorage:', error);
+            }
+        };
+        
+        const loadMessagesFromLocalStorage = () => {
+            try {
+                let saved = localStorage.getItem('shogun_d3_chat_messages');
+                if (!saved) {
+                    saved = localStorage.getItem('succus_chat_messages');
+                }
+                
+                if (saved) {
+                    chatMessages = JSON.parse(saved);
+                    console.log('Messages loaded from localStorage:', Object.keys(chatMessages).length, 'conversations found');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading messages from localStorage:', error);
+            }
+            return false;
+        };
+        
+        // Load messages from localStorage on startup
+        loadMessagesFromLocalStorage();
+        
+        // Function to check Gun status
+        const checkGunStatus = async () => {
+            try {
+                const status = await window.d3.debug.testGunConnection();
+                const statusElement = document.getElementById('gunStatus');
+                
+                if (status.success) {
+                    statusElement.innerHTML = `
+                        <span class="status-indicator online"></span>
+                        <span>Gun connected (latency: ${status.latency}ms)</span>
+                    `;
+                    return true;
+                } else {
+                    statusElement.innerHTML = `
+                        <span class="status-indicator offline"></span>
+                        <span>Gun disconnected: ${status.message}</span>
+                    `;
+                    return false;
+                }
+            } catch (error) {
+                document.getElementById('gunStatus').innerHTML = `
+                    <span class="status-indicator offline"></span>
+                    <span>Gun error: ${error.message}</span>
+                `;
+                return false;
+            }
+        };
+        
+        // Check Gun status every 10 seconds
+        setInterval(checkGunStatus, 10000);
+        checkGunStatus();
+        
+        // Function to connect wallet
+        const connectWallet = async () => {
+            try {
+                const result = await d3.connectWithMetaMask();
+                
+                if (!result || !result.address) {
+                    console.error("Connection error: invalid result", result);
+                    return;
+                }
+                
+                userAddress = result.address;
+                gunKeyPair = result.keypair;
+                
+                window.currentUserAddress = userAddress;
+                window.gunKeyPair = gunKeyPair;
+                
+                // Add connected class to hide buttons and show status
+                const walletSection = document.getElementById('wallet-section');
+                walletSection.classList.add('connected');
+                
+                walletInfoEl.innerHTML = `
+                    <div style="font-weight: 600;">✓ Wallet connected</div>
+                    <div style="font-size: 0.8rem; margin-top: 2px;">${userAddress.slice(0, 6)}...${userAddress.slice(-4)}</div>
+                `;
+                
+                keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair active</span>`;
+                
+                // Show backup button when connected
+                document.getElementById('backupKeypair').style.display = 'inline-block';
+                
+                chatSection.style.display = 'block';
+            } catch (error) {
+                console.error("Error connecting to wallet:", error);
+                alert("Error connecting to wallet. Check console for details.");
+            }
+        };
+        
+        // Function to update conversations list
+        const updateConversationsList = () => {
+            const conversationsList = document.getElementById('conversationsList');
+            conversationsList.innerHTML = '';
+            
+            const currentRecipient = recipientAddressInput.value.trim();
+            const conversations = Object.keys(chatMessages);
+            
+            if (conversations.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'conversation-item';
+                emptyItem.innerHTML = '<div class="address">No conversations yet</div>';
+                conversationsList.appendChild(emptyItem);
+                return;
+            }
+            
+            conversations.sort((a, b) => {
+                const lastMsgA = chatMessages[a].length > 0 ? 
+                    chatMessages[a][chatMessages[a].length - 1].timestamp : 0;
+                const lastMsgB = chatMessages[b].length > 0 ? 
+                    chatMessages[b][chatMessages[b].length - 1].timestamp : 0;
+                return lastMsgB - lastMsgA;
+            });
+            
+            conversations.forEach(address => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                if (address === currentRecipient) {
+                    item.className += ' active';
+                }
+                
+                const messageCount = chatMessages[address].length;
+                const lastMessage = messageCount > 0 ? 
+                    chatMessages[address][chatMessages[address].length - 1].decrypted : '';
+                const lastMessagePreview = lastMessage.length > 20 ? 
+                    lastMessage.substring(0, 20) + '...' : lastMessage;
+                
+                item.innerHTML = `
+                    <div class="address">${address.slice(0, 6)}...${address.slice(-4)}</div>
+                    <div class="message-count">${messageCount} messages</div>
+                    <div class="last-message">${lastMessagePreview}</div>
+                `;
+                
+                item.addEventListener('click', () => {
+                    recipientAddressInput.value = address;
+                    startListeningToConversation(address);
+                    
+                    document.querySelectorAll('.conversation-item').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                });
+                
+                conversationsList.appendChild(item);
+            });
+        };
+        
+        // Function to start listening to a conversation
+        const startListeningToConversation = async (recipientAddress) => {
+            if (!recipientAddress || !userAddress) {
+                console.warn("Cannot start listening: missing recipient or sender address");
+                return;
+            }
+            
+            const recipientAddr = recipientAddress.trim();
+            if (!recipientAddr.startsWith('0x')) {
+                alert("Please enter a valid Ethereum address starting with 0x");
+                return;
+            }
+            
+            // Verifica se c'è già un listener attivo per questo indirizzo
+            if (window.d3.activeListeners && window.d3.activeListeners.has(recipientAddr)) {
+                console.log(`Listener già attivo per ${recipientAddr}, non ne creo un altro`);
+                // Aggiorniamo solo la visualizzazione dei messaggi
+                renderConversation(recipientAddr);
+                return;
+            }
+            
+            // Prima ferma eventuali listener precedenti
+            window.d3.stopReceiveMessage && window.d3.stopReceiveMessage(recipientAddr);
+            
+            // Inizializza o carica la conversazione
+            renderConversation(recipientAddr);
+            
+            // Avvia il nuovo listener
+            window.d3.receiveMessage(recipientAddr, (messageData) => {
+                processIncomingMessage(recipientAddr, messageData);
+            });
+        };
+        
+        // Funzione per renderizzare i messaggi di una conversazione
+        const renderConversation = (recipientAddr) => {
+            messagesContainer.innerHTML = '';
+            
+            if (!chatMessages[recipientAddr]) {
+                chatMessages[recipientAddr] = [];
+            }
+            
+            const knownMessageIds = new Set();
+            
+            chatMessages[recipientAddr].forEach(messageData => {
+                const { decrypted, isSentByMe, timestamp, sender, messageKey } = messageData;
+                
+                if (messageKey) {
+                    knownMessageIds.add(messageKey);
+                }
+                
+                const messageTime = new Date(timestamp);
+                const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = isSentByMe ? 'message sent' : 'message received';
+                messageElement.setAttribute('data-msg-id', messageKey);
+                messageElement.innerHTML = `
+                    ${decrypted}
+                    <div class="meta">
+                        ${timeString}
+                        <span class="message-sender">${isSentByMe ? 'You' : sender.slice(0, 6) + '...'}</span>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageElement);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Crea un set globale per tenere traccia dei messaggi già visualizzati
+            window.displayedMessages = new Set(knownMessageIds);
+            // Esportiamo anche tutti gli ID dei messaggi inviati da me per maggiore sicurezza
+            window.sentMessageIds = new Set();
+            chatMessages[recipientAddr].forEach(msg => {
+                if (msg.isSentByMe) {
+                    window.sentMessageIds.add(msg.messageKey);
+                }
+            });
+        };
+        
+        // Funzione per processare i messaggi in arrivo
+        const processIncomingMessage = (recipientAddr, messageData) => {
+            const { decrypted, isSentByMe, timestamp, sender, messageKey, originalData } = messageData;
+            
+            if (!decrypted) {
+                return;
+            }
+            
+            const uniqueId = messageKey || `msg_${timestamp}_${Math.random().toString(36).substring(2, 9)}`;
+            
+            // Controlli multipli per evitare duplicati:
+            
+            // 0. Controlla se il messaggio è appena stato inviato da noi
+            if (window.justSentMessageKeys && window.justSentMessageKeys.has(messageKey)) {
+                console.log(`Messaggio appena inviato da noi, ignoro l'eco: ${messageKey}`);
+                window.displayedMessages = window.displayedMessages || new Set();
+                window.displayedMessages.add(uniqueId);
+                return;
+            }
+            
+            // 1. Controlla se il messaggio è già nel set di messaggi visualizzati
+            if (window.displayedMessages && window.displayedMessages.has(uniqueId)) {
+                console.log(`Messaggio già visualizzato (displayedMessages): ${uniqueId}`);
+                return;
+            }
+            
+            // 2. Controlla esplicitamente se è un messaggio inviato da noi
+            if (isSentByMe && sender === userAddress) {
+                // 2.1 Controllo se l'ID è nel set dei messaggi inviati
+                if (window.sentMessageIds && window.sentMessageIds.has(uniqueId)) {
+                    console.log(`Messaggio inviato da me già registrato: ${uniqueId}`);
+                    return;
+                }
+                
+                // 2.2 Controllo se il messaggio inizia con "sent_"
+                if (uniqueId.startsWith('sent_')) {
+                    console.log(`Messaggio inviato da me (sent_ prefix): ${uniqueId}`);
+                    return;
+                }
+                
+                // 2.3 Controllo sul contenuto del messaggio
+                if (window.sentMessageContents && window.sentMessageContents.has(decrypted)) {
+                    console.log(`Messaggio inviato da me con stesso contenuto: ${decrypted}`);
+                    window.displayedMessages.add(uniqueId);
+                    return;
+                }
+                
+                // 2.4 Controllo se esiste già un elemento HTML per questo messaggio
+                const existingElements = document.querySelectorAll('.message.sent');
+                for (const el of existingElements) {
+                    const elText = el.textContent.trim();
+                    if (elText.includes(decrypted)) {
+                        console.log(`Messaggio inviato da me già presente nel DOM: ${uniqueId}`);
+                        window.displayedMessages.add(uniqueId);
+                        return;
+                    }
+                }
+            }
+            
+            // 3. Controlla se esiste già un elemento nel DOM con questo ID
+            const existingMsg = document.querySelector(`.message[data-msg-id="${uniqueId}"]`);
+            if (existingMsg) {
+                console.log(`Messaggio già presente nel DOM: ${uniqueId}`);
+                window.displayedMessages.add(uniqueId);
+                return;
+            }
+            
+            // Procedi solo se il messaggio è veramente nuovo
+            
+            const messageToSave = { decrypted, isSentByMe, timestamp, sender, messageKey: uniqueId };
+            chatMessages[recipientAddr].push(messageToSave);
+            
+            // Aggiungi il messaggio alla lista di quelli già visualizzati
+            window.displayedMessages.add(uniqueId);
+            if (isSentByMe) {
+                window.sentMessageIds.add(uniqueId);
+            }
+            
+            saveMessagesToLocalStorage();
+            updateConversationsList();
+            
+            const messageTime = new Date(timestamp);
+            const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = isSentByMe ? 'message sent' : 'message received';
+            messageElement.setAttribute('data-msg-id', uniqueId);
+            messageElement.setAttribute('data-sent-by-me', 'true');
+            messageElement.innerHTML = `
+                ${decrypted}
+                <div class="meta">
+                    ${timeString}
+                    <span class="message-sender">You</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        
+        // Function to send a message
+        const sendMessage = async () => {
+            const message = messageInput.value.trim();
+            const recipientAddress = recipientAddressInput.value.trim();
+            
+            if (!message || !recipientAddress) {
+                alert("Please enter both a message and a recipient address.");
+                return;
+            }
+            
+            try {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                messagesContainer.appendChild(typingIndicator);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                console.log(`Verifying keypair for recipient ${recipientAddress}`);
+                const recipientPubKey = await d3.getKeypair(recipientAddress);
+                
+                if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+                    if (typingIndicator.parentNode) {
+                        messagesContainer.removeChild(typingIndicator);
+                    }
+                    
+                    // Simple message instead of alert with generation option
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'message received';
+                    errorMsg.innerHTML = `
+                        <div style="color: #EF4444; font-weight: 500;">⚠️ Cannot send message</div>
+                        <div style="font-size: 0.9rem; margin-top: 4px; color: var(--secondary-color);">
+                            Recipient ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)} doesn't have a valid keypair.
+                        </div>
+                        <div class="meta">
+                            ${new Date().toLocaleTimeString()}
+                            <span class="message-sender">System</span>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(errorMsg);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    return;
+                }
+                
+                const result = await d3.sendmessage(message, [recipientAddress], gunKeyPair);
+                
+                // Remove typing indicator
+                if (typingIndicator.parentNode) {
+                    messagesContainer.removeChild(typingIndicator);
+                }
+                
+                if (result.sent) {
+                    console.log("Messaggio inviato con successo, dettagli:", result);
+                    messageInput.value = '';
+                    
+                    // Utilizza un ID univoco con prefisso 'sent_' per distinguere i messaggi inviati
+                    const uniqueId = `sent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                    const messageTime = new Date();
+                    const timeString = messageTime.toLocaleTimeString() + ' ' + messageTime.toLocaleDateString();
+                    
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message sent';
+                    messageElement.setAttribute('data-msg-id', uniqueId);
+                    messageElement.setAttribute('data-sent-by-me', 'true');
+                    messageElement.innerHTML = `
+                        ${message}
+                        <div class="meta">
+                            ${timeString}
+                            <span class="message-sender">You</span>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(messageElement);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    if (!chatMessages[recipientAddress]) {
+                        chatMessages[recipientAddress] = [];
+                    }
+                    
+                    // Crea anche un identificatore basato sull'ID del messaggio originale
+                    // per evitare duplicazioni quando il messaggio torna da Gun
+                    if (result.key) {
+                        window.justSentMessageKeys = window.justSentMessageKeys || new Set();
+                        window.justSentMessageKeys.add(result.key);
+                        // Pulisci dopo 5 secondi
+                        setTimeout(() => {
+                            window.justSentMessageKeys.delete(result.key);
+                        }, 5000);
+                    }
+                    
+                    const messageToSave = {
+                        decrypted: message,
+                        isSentByMe: true,
+                        timestamp: messageTime.getTime(),
+                        sender: userAddress,
+                        messageKey: uniqueId
+                    };
+                    chatMessages[recipientAddress].push(messageToSave);
+                    
+                    // Registra questo messaggio in tutti i possibili set per evitare duplicati
+                    if (!window.displayedMessages) {
+                        window.displayedMessages = new Set();
+                    }
+                    window.displayedMessages.add(uniqueId);
+                    
+                    if (!window.sentMessageIds) {
+                        window.sentMessageIds = new Set();
+                    }
+                    window.sentMessageIds.add(uniqueId);
+                    
+                    // Aggiungi anche una traccia del contenuto per il controllo aggiuntivo
+                    if (!window.sentMessageContents) {
+                        window.sentMessageContents = new Set();
+                    }
+                    window.sentMessageContents.add(message);
+                    
+                    saveMessagesToLocalStorage();
+                    updateConversationsList();
+                    startListeningToConversation(recipientAddress);
+                } else {
+                    alert("Error sending message: " + (result.why ? result.why.message || result.why : "Unknown error"));
+                }
+                
+            } catch (error) {
+                console.error("Error sending message:", error);
+                alert("Error sending message: " + error.message);
+            }
+        };
+        
+        // Event listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        sendMessageBtn.addEventListener('click', sendMessage);
+        
+        // Add event listeners for backup and restore buttons
+        document.getElementById('backupKeypair').addEventListener('click', () => {
+            if (!userAddress || !gunKeyPair) {
+                alert('Please connect your wallet first!');
+                return;
+            }
+            document.getElementById('backupModal').style.display = 'block';
+        });
+        
+        document.getElementById('restoreKeypair').addEventListener('click', () => {
+            document.getElementById('restoreModal').style.display = 'block';
+        });
+        
+        // Modal functions
+        window.closeBackupModal = () => {
+            document.getElementById('backupModal').style.display = 'none';
+            document.getElementById('backupData').value = '';
+            document.getElementById('backupPassword').value = '';
+        };
+        
+        window.closeRestoreModal = () => {
+            document.getElementById('restoreModal').style.display = 'none';
+            document.getElementById('restoreData').value = '';
+            document.getElementById('restorePassword').value = '';
+        };
+        
+        // Generate backup
+        window.generateBackup = async () => {
+            try {
+                if (!gunKeyPair) {
+                    alert('No keypair available to backup!');
+                    return;
+                }
+                
+                const password = document.getElementById('backupPassword').value;
+                let backupData;
+                
+                if (window.d3.backupKeypair && typeof window.d3.backupKeypair === 'function') {
+                    // Use the API function if available
+                    backupData = await window.d3.backupKeypair(password);
+                } else {
+                    // Fallback: create manual backup
+                    const backup = {
+                        version: "1.0",
+                        timestamp: Date.now(),
+                        address: userAddress,
+                        keypair: {
+                            pub: gunKeyPair.pub,
+                            priv: gunKeyPair.priv,
+                            epub: gunKeyPair.epub,
+                            epriv: gunKeyPair.epriv
+                        }
+                    };
+                    
+                    if (password) {
+                        // Simple encryption with SEA
+                        const encrypted = await Gun.SEA.encrypt(JSON.stringify(backup.keypair), password);
+                        backup.keypair = { encrypted: encrypted };
+                        backup.encrypted = true;
+                    }
+                    
+                    backupData = backup;
+                }
+                
+                document.getElementById('backupData').value = JSON.stringify(backupData, null, 2);
+                
+            } catch (error) {
+                console.error('Error generating backup:', error);
+                alert('Error generating backup: ' + error.message);
+            }
+        };
+        
+        // Download backup as file
+        window.downloadBackup = () => {
+            const backupText = document.getElementById('backupData').value;
+            if (!backupText) {
+                alert('Please generate a backup first!');
+                return;
+            }
+            
+            const blob = new Blob([backupText], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `shogun-d3-backup-${userAddress.slice(0, 8)}-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+        
+        // Copy backup to clipboard
+        window.copyBackupToClipboard = async () => {
+            const backupText = document.getElementById('backupData').value;
+            if (!backupText) {
+                alert('Please generate a backup first!');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(backupText);
+                alert('Backup copied to clipboard!');
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                alert('Error copying to clipboard. Please copy manually.');
+            }
+        };
+        
+        // Load backup from file
+        window.loadBackupFile = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('restoreData').value = e.target.result;
+            };
+            reader.readAsText(file);
+        };
+        
+        // Perform restore
+        window.performRestore = async () => {
+            try {
+                const backupDataText = document.getElementById('restoreData').value.trim();
+                const password = document.getElementById('restorePassword').value;
+                
+                if (!backupDataText) {
+                    alert('Please provide backup data!');
+                    return;
+                }
+                
+                let backupData;
+                try {
+                    backupData = JSON.parse(backupDataText);
+                } catch (error) {
+                    alert('Invalid backup data format!');
+                    return;
+                }
+                
+                let success = false;
+                
+                if (window.d3.restoreKeypair && typeof window.d3.restoreKeypair === 'function') {
+                    // Use the API function if available
+                    success = await window.d3.restoreKeypair(backupData, password);
+                } else {
+                    // Fallback: manual restore
+                    let keypairData = backupData.keypair;
+                    
+                    if (backupData.encrypted && keypairData.encrypted) {
+                        if (!password) {
+                            alert('This backup is encrypted. Please provide the password.');
+                            return;
+                        }
+                        
+                        try {
+                            const decrypted = await Gun.SEA.decrypt(keypairData.encrypted, password);
+                            keypairData = JSON.parse(decrypted);
+                        } catch (error) {
+                            alert('Failed to decrypt backup. Wrong password?');
+                            return;
+                        }
+                    }
+                    
+                    if (!keypairData.pub || !keypairData.priv || !keypairData.epub || !keypairData.epriv) {
+                        alert('Invalid keypair data in backup!');
+                        return;
+                    }
+                    
+                    // Set the restored keypair
+                    gunKeyPair = keypairData;
+                    window.gunKeyPair = gunKeyPair;
+                    
+                    // Update address if available in backup
+                    if (backupData.address) {
+                        userAddress = backupData.address;
+                        window.currentUserAddress = userAddress;
+                    }
+                    
+                    success = true;
+                }
+                
+                if (success) {
+                    alert('Keypair restored successfully!');
+                    closeRestoreModal();
+                    
+                    // Update UI
+                    if (userAddress) {
+                        // Add connected class to hide buttons and show status
+                        const walletSection = document.getElementById('wallet-section');
+                        walletSection.classList.add('connected');
+                        
+                        walletInfoEl.innerHTML = `
+                            <div style="font-weight: 600;">✓ Keypair restored</div>
+                            <div style="font-size: 0.8rem; margin-top: 2px;">${userAddress.slice(0, 6)}...${userAddress.slice(-4)}</div>
+                        `;
+                        
+                        keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair restored and active</span>`;
+                        chatSection.style.display = 'block';
+                        document.getElementById('backupKeypair').style.display = 'inline-block';
+                    }
+                } else {
+                    alert('Failed to restore keypair!');
+                }
+                
+            } catch (error) {
+                console.error('Error restoring keypair:', error);
+                alert('Error restoring keypair: ' + error.message);
+            }
+        };
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            const backupModal = document.getElementById('backupModal');
+            const restoreModal = document.getElementById('restoreModal');
+            
+            if (event.target === backupModal) {
+                closeBackupModal();
+            }
+            if (event.target === restoreModal) {
+                closeRestoreModal();
+            }
+        });
+        
+        recipientAddressInput.addEventListener('input', (e) => {
+            const recipientAddress = e.target.value.trim();
+            if (recipientAddress.startsWith('0x') && recipientAddress.length > 10) {
+                startListeningToConversation(recipientAddress);
+            }
+        });
+        
+        document.getElementById('refreshChat').addEventListener('click', async () => {
+            const recipientAddr = recipientAddressInput.value.trim();
+            if (!recipientAddr || !recipientAddr.startsWith('0x')) {
+                alert("Please enter a valid recipient address first");
+                return;
+            }
+            
+            messagesContainer.innerHTML = '';
+            
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'message';
+            loadingMessage.style.textAlign = 'center';
+            loadingMessage.style.color = '#888';
+            loadingMessage.innerText = 'Loading messages...';
+            messagesContainer.appendChild(loadingMessage);
+            
+            try {
+                await startListeningToConversation(recipientAddr);
+                messagesContainer.removeChild(loadingMessage);
+            } catch (error) {
+                loadingMessage.style.color = 'red';
+                loadingMessage.innerText = `Loading error: ${error.message}`;
+            }
+        });
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        window.addEventListener('beforeunload', () => {
+            saveMessagesToLocalStorage();
+        });
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            if (Object.keys(chatMessages).length > 0) {
+                updateConversationsList();
+            }
+        });
+
+        // Aggiungi event listener per il cambio di livello di log
+        document.getElementById('logLevel').addEventListener('change', function(e) {
+            const selectedLevel = e.target.value;
+            if (window.d3 && window.d3.debug) {
+                window.d3.debug.logLevel = selectedLevel;
+                console.log(`Livello di log cambiato a: ${selectedLevel}`);
+            }
+        });
+
+        // Imposta il log level predefinito all'avvio
+        if (window.d3 && window.d3.debug) {
+            const logLevelSelect = document.getElementById('logLevel');
+            if (logLevelSelect) {
+                window.d3.debug.logLevel = logLevelSelect.value;
+            }
+        }
+    </script>
+</body>
+</html>
