@@ -1,5 +1,8 @@
-
-const GUN_PEERS = ["https://peer.wallie.io/gun","wss://ruling-mastodon-improved.ngrok-free.app/gun"];
+const GUN_PEERS = [
+  "https://peer.wallie.io/gun",
+  "wss://relay.shogun-eco.xyz/gun",
+  "https://gun-manhattan.herokuapp.com/gun",
+];
 
 const GUN_TIMEOUT = 10000; // 10 secondi invece dei 5 standard
 
@@ -11,40 +14,40 @@ console.log("🔍 window.ShogunCore:", typeof window.ShogunCore);
 
 async function initializeShogun() {
   console.log("🔄 DEBUGGING ShogunCore...");
-  
+
   console.log("typeof ShogunCore:", typeof ShogunCore);
   console.log("typeof window.ShogunCore:", typeof window.ShogunCore);
   console.log("ShogunCore:", ShogunCore);
-  
+
   let ShogunClass = null;
-  
+
   // ✅ CORRETTO: Usa la struttura che vediamo nel console
-  if (typeof ShogunCore === 'object') {
+  if (typeof ShogunCore === "object") {
     console.log("ShogunCore keys:", Object.keys(ShogunCore));
-    
+
     // Prova prima ShogunCore.ShogunCore poi ShogunCore.default
-    if (typeof ShogunCore.ShogunCore === 'function') {
+    if (typeof ShogunCore.ShogunCore === "function") {
       ShogunClass = ShogunCore.ShogunCore;
       console.log("✅ Using ShogunCore.ShogunCore");
-    } else if (typeof ShogunCore.default === 'function') {
+    } else if (typeof ShogunCore.default === "function") {
       ShogunClass = ShogunCore.default;
       console.log("✅ Using ShogunCore.default");
     }
-  } else if (typeof ShogunCore === 'function') {
+  } else if (typeof ShogunCore === "function") {
     ShogunClass = ShogunCore;
     console.log("✅ Using ShogunCore directly");
   }
-  
+
   // Se abbiamo trovato la classe, proviamo a inizializzare
   if (ShogunClass) {
     try {
       console.log("🔧 Creating ShogunCore instance...");
-      
+
       const config = {
         peers: GUN_PEERS,
         scope: "shogun",
-        web3: { 
-          enabled: true 
+        web3: {
+          enabled: true,
         },
         webauthn: {
           enabled: true,
@@ -62,7 +65,7 @@ async function initializeShogun() {
       };
 
       console.log("🔧 Config:", config);
-      
+
       shogunInstance = new ShogunClass(config);
       console.log("✅ ShogunCore instance created");
 
@@ -72,15 +75,14 @@ async function initializeShogun() {
 
       window.gun = shogunInstance.db.gun;
       window.SEA = Gun.SEA;
-      
+
       console.log("🎉 ShogunCore setup completed!");
       return shogunInstance;
-      
     } catch (error) {
       console.error("❌ ShogunCore initialization failed:", error);
     }
   }
-  
+
   // Fallback a Gun diretto
   console.warn("🔄 Using Gun fallback");
   try {
@@ -96,7 +98,7 @@ async function initializeShogun() {
   } catch (gunError) {
     console.error("❌ Gun fallback failed:", gunError);
   }
-  
+
   return null;
 }
 
@@ -107,16 +109,18 @@ console.log("🚀 Starting shogun initialization promise...");
 const shogunPromise = initializeShogun();
 
 // ✅ DEBUG: Monitora lo stato della promessa
-shogunPromise.then((result) => {
-  console.log("🎯 Shogun promise resolved with:", !!result);
-  if (result) {
-    console.log("✅ ShogunCore is ready for use");
-  } else {
-    console.warn("⚠️ ShogunCore initialization failed, using fallback");
-  }
-}).catch((error) => {
-  console.error("💥 Shogun promise rejected:", error);
-});
+shogunPromise
+  .then((result) => {
+    console.log("🎯 Shogun promise resolved with:", !!result);
+    if (result) {
+      console.log("✅ ShogunCore is ready for use");
+    } else {
+      console.warn("⚠️ ShogunCore initialization failed, using fallback");
+    }
+  })
+  .catch((error) => {
+    console.error("💥 Shogun promise rejected:", error);
+  });
 
 // Monitoraggio dello stato dei peer di Gun
 window.gun?.on("hi", (peer) => {
@@ -139,9 +143,9 @@ window.gun?.on("put", function (at) {
 window.d3 = {
   // ✅ AGGIORNATO: Riferimento a ShogunCore (sarà disponibile dopo l'inizializzazione)
   shogun: null,
-  
+
   // ✅ NUOVO: Metodo per attendere l'inizializzazione
-  waitForInit: async function() {
+  waitForInit: async function () {
     if (!this.shogun) {
       this.shogun = await shogunPromise;
     }
@@ -232,10 +236,10 @@ window.d3 = {
   connectWithMetaMask: async function () {
     try {
       console.log("🔄 Starting MetaMask connection...");
-      
-      // ✅ NUOVO: Attendi l'inizializzazione 
+
+      // ✅ NUOVO: Attendi l'inizializzazione
       await this.waitForInit();
-      
+
       const provider = await this.getProvider();
       if (!provider) {
         console.error("❌ MetaMask provider not available");
@@ -252,46 +256,53 @@ window.d3 = {
         const web3Plugin = this.shogun.getPlugin("web3");
         if (web3Plugin) {
           let authResult = await web3Plugin.login(address);
-          
+
           if (!authResult.success) {
-            console.log("⚠️ User not found, attempting registration with MetaMask");
+            console.log(
+              "⚠️ User not found, attempting registration with MetaMask"
+            );
             authResult = await web3Plugin.signUp(address);
           }
-          
+
           if (authResult.success) {
-            console.log("✅ Authentication completed with ShogunCore:", authResult);
+            console.log(
+              "✅ Authentication completed with ShogunCore:",
+              authResult
+            );
             window.currentUserAddress = address;
             const gunUser = this.shogun.db.user;
             window.gunKeyPair = gunUser._.sea;
-            
+
             window.d3.registerKeypair(address, {
               pub: window.gunKeyPair.pub,
               epub: window.gunKeyPair.epub,
             });
-            
+
             return { address, keypair: window.gunKeyPair };
           }
         }
       }
-      
+
       // ✅ FALLBACK: Usa MetaMask diretto con Gun
       console.log("🔄 Using MetaMask direct authentication with Gun...");
-      
+
       // Crea una signature per autenticare l'utente
       const message = `Shogun-D3 Authentication - ${Date.now()}`;
       const signature = await provider.getSigner().signMessage(message);
-      
+
       // Genera un keypair da gun usando la signature come seed
-      const hash = await Gun.SEA.work(signature, null, null, {name: 'SHA-256'});
+      const hash = await Gun.SEA.work(signature, null, null, {
+        name: "SHA-256",
+      });
       const keypair = await Gun.SEA.pair();
-      
+
       // Autentica con Gun usando l'address come username
       const username = address.toLowerCase();
       const password = hash;
-      
+
       console.log("🔐 Authenticating with Gun...");
       const user = window.gun.user();
-      
+
       return new Promise((resolve, reject) => {
         user.auth(username, password, (ack) => {
           if (ack.err) {
@@ -304,17 +315,21 @@ window.d3 = {
                 console.log("✅ User created, logging in...");
                 user.auth(username, password, (authAck) => {
                   if (authAck.err) {
-                    reject(new Error(`Failed to login after creation: ${authAck.err}`));
+                    reject(
+                      new Error(
+                        `Failed to login after creation: ${authAck.err}`
+                      )
+                    );
                   } else {
                     console.log("✅ Authentication successful");
                     window.currentUserAddress = address;
                     window.gunKeyPair = user._.sea;
-                    
+
                     window.d3.registerKeypair(address, {
                       pub: window.gunKeyPair.pub,
                       epub: window.gunKeyPair.epub,
                     });
-                    
+
                     resolve({ address, keypair: window.gunKeyPair });
                   }
                 });
@@ -324,17 +339,16 @@ window.d3 = {
             console.log("✅ User authenticated successfully");
             window.currentUserAddress = address;
             window.gunKeyPair = user._.sea;
-            
+
             window.d3.registerKeypair(address, {
               pub: window.gunKeyPair.pub,
               epub: window.gunKeyPair.epub,
             });
-            
+
             resolve({ address, keypair: window.gunKeyPair });
           }
         });
       });
-      
     } catch (error) {
       console.error("❌ Error connecting to MetaMask:", error);
       throw error;
@@ -367,13 +381,16 @@ window.d3 = {
         pub: window.gunKeyPair.pub,
         priv: window.gunKeyPair.priv,
         epub: window.gunKeyPair.epub,
-        epriv: window.gunKeyPair.epriv
-      }
+        epriv: window.gunKeyPair.epriv,
+      },
     };
 
     if (password) {
       // Simple encryption with SEA
-      const encrypted = await Gun.SEA.encrypt(JSON.stringify(backup.keypair), password);
+      const encrypted = await Gun.SEA.encrypt(
+        JSON.stringify(backup.keypair),
+        password
+      );
       backup.keypair = { encrypted: encrypted };
       backup.encrypted = true;
     }
@@ -414,18 +431,28 @@ window.d3 = {
 
       if (backupData.encrypted && keypairData.encrypted) {
         if (!password) {
-          throw new Error("This backup is encrypted. Please provide the password.");
+          throw new Error(
+            "This backup is encrypted. Please provide the password."
+          );
         }
 
         try {
-          const decrypted = await Gun.SEA.decrypt(keypairData.encrypted, password);
+          const decrypted = await Gun.SEA.decrypt(
+            keypairData.encrypted,
+            password
+          );
           keypairData = JSON.parse(decrypted);
         } catch (error) {
           throw new Error("Failed to decrypt backup. Wrong password?");
         }
       }
 
-      if (!keypairData.pub || !keypairData.priv || !keypairData.epub || !keypairData.epriv) {
+      if (
+        !keypairData.pub ||
+        !keypairData.priv ||
+        !keypairData.epub ||
+        !keypairData.epriv
+      ) {
         throw new Error("Invalid keypair data in backup");
       }
 
@@ -1810,13 +1837,13 @@ window.d3 = {
   // ✅ AGGIORNATO: Supporto per verificare plugin attivi
   getActivePlugins: function () {
     const plugins = {};
-    
+
     // Verifica i plugin disponibili
     plugins.web3 = !!this.shogun.getPlugin("web3");
     plugins.webauthn = !!this.shogun.getPlugin("webauthn");
     plugins.nostr = !!this.shogun.getPlugin("nostr");
     plugins.oauth = !!this.shogun.getPlugin("oauth");
-    
+
     return plugins;
   },
 };
@@ -1830,12 +1857,11 @@ window.d3 = {
   try {
     const shogunResult = await window.d3.waitForInit();
     console.log("Shogun-D3 initialization completed");
-    
+
     window.d3.gun = window.gun;
     window.d3.SEA = window.SEA;
-    
+
     window.d3.shogun = shogunResult;
-    
   } catch (error) {
     console.error("Failed to initialize Shogun-D3:", error);
   }
@@ -1847,8 +1873,7 @@ window.d3 = {
       const address = await provider.getSigner().getAddress();
       window.currentUserAddress = address;
     }
-  } catch (error) {
-  }
+  } catch (error) {}
 })();
 
 // Aggiorno la funzione receiveMessage per tracciare gli ascolti
