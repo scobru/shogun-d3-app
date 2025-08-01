@@ -1,28 +1,17 @@
-// Wrapper per rendere Shogun-D3 utilizzabile in un browser
-// Basato sul codice originale da /src/index.ts
 
-// ✅ AGGIORNATO: Import ShogunCore (deve essere caricato prima di questo script)
-// Assicurati che shogun-core sia caricato tramite script tag nell'HTML
-
-// Definisci i peer Gun prima di inizializzare
 const GUN_PEERS = ["https://peer.wallie.io/gun","wss://ruling-mastodon-improved.ngrok-free.app/gun"];
 
-// Aumentiamo timeout iniziale di Gun
 const GUN_TIMEOUT = 10000; // 10 secondi invece dei 5 standard
 
-// ✅ AGGIORNATO: Inizializzazione asincrona di ShogunCore
 let shogunInstance = null;
 
-// ✅ DEBUG: Log immediato per verificare il caricamento
 console.log("🔍 d3.js loaded - checking ShogunCore availability...");
 console.log("🔍 typeof ShogunCore:", typeof ShogunCore);
 console.log("🔍 window.ShogunCore:", typeof window.ShogunCore);
 
-// Funzione di inizializzazione asincrona
 async function initializeShogun() {
   console.log("🔄 DEBUGGING ShogunCore...");
   
-  // DEBUG: Controlla tutti i possibili riferimenti a ShogunCore
   console.log("typeof ShogunCore:", typeof ShogunCore);
   console.log("typeof window.ShogunCore:", typeof window.ShogunCore);
   console.log("ShogunCore:", ShogunCore);
@@ -1842,18 +1831,15 @@ window.d3 = {
     const shogunResult = await window.d3.waitForInit();
     console.log("Shogun-D3 initialization completed");
     
-    // ✅ IMPORTANTE: Aggiorna i riferimenti dopo l'inizializzazione
     window.d3.gun = window.gun;
     window.d3.SEA = window.SEA;
     
-    // ✅ AGGIORNA: Assegna shogun al namespace
     window.d3.shogun = shogunResult;
     
   } catch (error) {
     console.error("Failed to initialize Shogun-D3:", error);
   }
 
-  // Memorizza l'indirizzo dell'utente corrente quando disponibile
   window.currentUserAddress = null;
   try {
     const provider = await window.d3.getProvider();
@@ -1862,7 +1848,6 @@ window.d3 = {
       window.currentUserAddress = address;
     }
   } catch (error) {
-    // Ignora errori (MetaMask potrebbe non essere connesso)
   }
 })();
 
@@ -1898,9 +1883,7 @@ window.d3.receiveMessage = async function (recipientAddress, callback) {
   return cleanupFn;
 };
 
-// Funzionalità di logging
 function createLogger() {
-  // Definiamo la gerarchia dei livelli di log
   const logLevels = {
     none: 0,
     error: 1,
@@ -1915,7 +1898,6 @@ function createLogger() {
   }
 
   function log(level, ...args) {
-    // Prendiamo il livello di log attualmente configurato
     const configuredLevel = window.d3?.debug?.logLevel || "info";
 
     // Verifica se possiamo utilizzare il logger di ShogunCore
@@ -1933,7 +1915,6 @@ function createLogger() {
       }
     }
 
-    // Altrimenti usiamo il logger esistente
     const levels = ["none", "error", "warn", "info", "debug", "verbose"];
     const currentLevelIndex = levels.indexOf(configuredLevel);
     const msgLevelIndex = levels.indexOf(level);
