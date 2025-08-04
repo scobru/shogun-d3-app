@@ -1,34 +1,38 @@
 const GUN_PEERS = [
-  "wss://relay.shogun-eco.xyz/gun",
+  // Primary reliable peers
   "https://peer.wallie.io/gun",
-  "https://gun-manhattan.herokuapp.com/gun",
-  "https://gundb-relay-mlccl.ondigitalocean.app/gun",
-  "https://plankton-app-6qfp3.ondigitalocean.app/",
-  "https://gun.defucc.me/gun",
-  "https://a.talkflow.team/gun",
-  "https://talkflow.team/gun",
+  "wss://relay.shogun-eco.xyz/gun",
 ];
 
-const GUN_TIMEOUT = 10000; // 10 secondi invece dei 5 standard
+const GUN_TIMEOUT = 20000; // Increased timeout for better reliability
+const MAX_RETRY_ATTEMPTS = 3;
 
 let shogunInstance = null;
 
 console.log("🔍 d3.js loaded - checking ShogunCore availability...");
-console.log("🔍 typeof ShogunCore:", typeof ShogunCore);
-console.log("🔍 window.ShogunCore:", typeof window.ShogunCore);
+
+// Only log detailed info if debug is enabled
+if (window.d3?.debug?.logLevel === "verbose") {
+  console.log("🔍 typeof ShogunCore:", typeof ShogunCore);
+  console.log("🔍 window.ShogunCore:", typeof window.ShogunCore);
+}
 
 async function initializeShogun() {
-  console.log("🔄 DEBUGGING ShogunCore...");
-
-  console.log("typeof ShogunCore:", typeof ShogunCore);
-  console.log("typeof window.ShogunCore:", typeof window.ShogunCore);
-  console.log("ShogunCore:", ShogunCore);
+  // Only show detailed debugging if verbose mode is enabled
+  if (window.d3?.debug?.logLevel === "verbose") {
+    console.log("🔄 DEBUGGING ShogunCore...");
+    console.log("typeof ShogunCore:", typeof ShogunCore);
+    console.log("typeof window.ShogunCore:", typeof window.ShogunCore);
+    console.log("ShogunCore:", ShogunCore);
+  }
 
   let ShogunClass = null;
 
   // ✅ CORRETTO: Usa la struttura che vediamo nel console
   if (typeof ShogunCore === "object") {
-    console.log("ShogunCore keys:", Object.keys(ShogunCore));
+    if (window.d3?.debug?.logLevel === "verbose") {
+      console.log("ShogunCore keys:", Object.keys(ShogunCore));
+    }
 
     // Prova prima ShogunCore.ShogunCore poi ShogunCore.default
     if (typeof ShogunCore.ShogunCore === "function") {
@@ -67,6 +71,14 @@ async function initializeShogun() {
           signup: 30000,
           operation: 60000,
         },
+        // Performance optimizations
+        localStorage: false,
+        radisk: false,
+        axe: false,
+        multicast: false,
+        // Reduce sync frequency
+        retry: 1000,
+        timeout: GUN_TIMEOUT,
       };
 
       console.log("🔧 Config:", config);
@@ -97,6 +109,9 @@ async function initializeShogun() {
       radisk: false,
       axe: false,
       multicast: false,
+      // Performance optimizations
+      retry: 1000,
+      timeout: GUN_TIMEOUT,
     });
     window.SEA = Gun.SEA;
     console.log("✅ Gun fallback successful");
@@ -109,6 +124,13 @@ async function initializeShogun() {
 
 // ✅ DEBUG: Log prima dell'inizializzazione
 console.log("🚀 Starting shogun initialization promise...");
+
+// Set default log level to reduce console noise
+if (!window.d3?.debug?.logLevel) {
+  window.d3 = window.d3 || {};
+  window.d3.debug = window.d3.debug || {};
+  window.d3.debug.logLevel = "error"; // Only show errors by default
+}
 
 // Inizializzazione immediata
 const shogunPromise = initializeShogun();
@@ -129,11 +151,15 @@ shogunPromise
 
 // Monitoraggio dello stato dei peer di Gun
 window.gun?.on("hi", (peer) => {
-  console.log(`Gun peer connesso: ${peer}`);
+  if (window.d3?.debug?.logLevel === "verbose") {
+    console.log(`Gun peer connesso: ${peer}`);
+  }
 });
 
 window.gun?.on("bye", (peer) => {
-  console.log(`Gun peer disconnesso: ${peer}`);
+  if (window.d3?.debug?.logLevel === "verbose") {
+    console.log(`Gun peer disconnesso: ${peer}`);
+  }
 });
 
 // Monitoraggio stato sincronizzazione - modifica per ridurre il rumore nei log
@@ -193,6 +219,41 @@ window.d3 = {
 
   // Debug utilities
   debug: {
+    // Set log level: "none", "error", "warn", "info", "debug", "verbose"
+    setLogLevel: function (level) {
+      const validLevels = ["none", "error", "warn", "info", "debug", "verbose"];
+      if (validLevels.includes(level)) {
+        this.logLevel = level;
+        console.log(`[SHOGUN-D3] Log level set to: ${level}`);
+        return true;
+      } else {
+        console.error(
+          `[SHOGUN-D3] Invalid log level: ${level}. Valid levels: ${validLevels.join(
+            ", "
+          )}`
+        );
+        return false;
+      }
+    },
+
+    // Get current log level
+    getLogLevel: function () {
+      return this.logLevel || "error";
+    },
+
+    // Quick methods to set common log levels
+    enableVerboseLogging: function () {
+      return this.setLogLevel("verbose");
+    },
+
+    disableLogging: function () {
+      return this.setLogLevel("none");
+    },
+
+    enableErrorOnly: function () {
+      return this.setLogLevel("error");
+    },
+
     testGunConnection: async function () {
       try {
         const startTime = Date.now();
@@ -207,12 +268,15 @@ window.d3 = {
           }, 5000);
 
           // Tenta di leggere un dato da Gun
-          window.gun.get("connection_test").once((data) => {
-            clearTimeout(timeoutId);
-            resolve({
-              success: true,
+          window.gun
+            .get("shogun")
+            .get("connection_test")
+            .once((data) => {
+              clearTimeout(timeoutId);
+              resolve({
+                success: true,
+              });
             });
-          });
         });
 
         const endTime = Date.now();
@@ -278,10 +342,22 @@ window.d3 = {
             const gunUser = this.shogun.db.user;
             window.gunKeyPair = gunUser._.sea;
 
-            window.d3.registerKeypair(address, {
+            await window.d3.registerKeypair(address, {
               pub: window.gunKeyPair.pub,
               epub: window.gunKeyPair.epub,
             });
+
+            // Assicurati che il keypair sia registrato anche con la funzione di verifica
+            this.ensureKeypairRegistered()
+              .then(() => {
+                console.log("✅ Keypair registration verified");
+              })
+              .catch((error) => {
+                console.warn(
+                  "Errore durante la registrazione del keypair:",
+                  error
+                );
+              });
 
             return { address, keypair: window.gunKeyPair };
           }
@@ -318,7 +394,7 @@ window.d3 = {
                 reject(new Error(`Failed to create user: ${createAck.err}`));
               } else {
                 console.log("✅ User created, logging in...");
-                user.auth(username, password, (authAck) => {
+                user.auth(username, password, async (authAck) => {
                   if (authAck.err) {
                     reject(
                       new Error(
@@ -330,12 +406,22 @@ window.d3 = {
                     window.currentUserAddress = address;
                     window.gunKeyPair = user._.sea;
 
-                    window.d3.registerKeypair(address, {
+                    await window.d3.registerKeypair(address, {
                       pub: window.gunKeyPair.pub,
                       epub: window.gunKeyPair.epub,
                     });
 
-                    resolve({ address, keypair: window.gunKeyPair });
+                    // Assicurati che il keypair sia registrato anche con la funzione di verifica
+                    this.ensureKeypairRegistered()
+                      .then(() => {
+                        console.log("✅ Keypair registration verified");
+                      })
+                      .catch((error) => {
+                        console.warn(
+                          "Errore durante la registrazione del keypair:",
+                          error
+                        );
+                      });
                   }
                 });
               }
@@ -350,7 +436,17 @@ window.d3 = {
               epub: window.gunKeyPair.epub,
             });
 
-            resolve({ address, keypair: window.gunKeyPair });
+            // Assicurati che il keypair sia registrato anche con la funzione di verifica
+            this.ensureKeypairRegistered()
+              .then(() => {
+                console.log("✅ Keypair registration verified");
+              })
+              .catch((error) => {
+                console.warn(
+                  "Errore durante la registrazione del keypair:",
+                  error
+                );
+              });
           }
         });
       });
@@ -471,7 +567,7 @@ window.d3 = {
 
       // Register the public part
       if (window.currentUserAddress) {
-        await this.registerKeypair(window.currentUserAddress, {
+        this.registerKeypair(window.currentUserAddress, {
           pub: keypairData.pub,
           epub: keypairData.epub,
         });
@@ -485,7 +581,7 @@ window.d3 = {
   },
 
   // Funzioni di gestione delle chiavi
-  registerKeypair: function (address, keypair) {
+  async registerKeypair(address, keypair) {
     // Estrae solo le chiavi pubbliche dal keypair
     const { epub, pub } = keypair;
 
@@ -497,13 +593,33 @@ window.d3 = {
       );
     }
 
+    // Normalizza l'indirizzo per il salvataggio aggiuntivo
+    const normalizedAddress = address.toLowerCase();
+
     // Le salva nel database decentralizzato, associate all'indirizzo Ethereum
     try {
-      window.gun.get(`skeypair${address}`).put({ epub, pub });
+      // Salva con l'indirizzo originale
+      window.gun.get("shogun").get(`skeypair${address}`).put({ epub, pub });
       console.log("Chiavi pubbliche registrate per l'indirizzo:", address, {
         epub: epub.substring(0, 15) + "...",
         pub: pub.substring(0, 15) + "...",
       });
+
+      // Salva anche con l'indirizzo normalizzato se diverso
+      if (address !== normalizedAddress) {
+        window.gun
+          .get("shogun")
+          .get(`skeypair${normalizedAddress}`)
+          .put({ epub, pub });
+        console.log(
+          "Chiavi pubbliche registrate anche per l'indirizzo normalizzato:",
+          normalizedAddress,
+          {
+            epub: epub.substring(0, 15) + "...",
+            pub: pub.substring(0, 15) + "...",
+          }
+        );
+      }
 
       return true;
     } catch (error) {
@@ -515,13 +631,41 @@ window.d3 = {
   // Verifica se esiste un keypair per l'indirizzo specificato
   hasKeypair: function (address) {
     return new Promise((resolve) => {
-      window.gun.get(`skeypair${address}`).once((data) => {
-        if (data && data.epub && data.pub) {
-          resolve(true);
-        } else {
+      // Normalizza l'indirizzo
+      const normalizedAddress = address.toLowerCase();
+
+      // Prova prima con l'indirizzo originale, poi con quello normalizzato
+      const addressesToTry = [address];
+      if (address !== normalizedAddress) {
+        addressesToTry.push(normalizedAddress);
+      }
+
+      let attempts = 0;
+      const maxAttempts = addressesToTry.length;
+
+      const tryNextAddress = () => {
+        if (attempts >= maxAttempts) {
           resolve(false);
+          return;
         }
-      });
+
+        const currentAddress = addressesToTry[attempts];
+        attempts++;
+
+        window.gun
+          .get("shogun")
+          .get(`skeypair${currentAddress}`)
+          .once((data) => {
+            if (data && data.epub && data.pub) {
+              resolve(true);
+            } else {
+              tryNextAddress();
+            }
+          });
+      };
+
+      // Inizia con il primo indirizzo
+      tryNextAddress();
     });
   },
 
@@ -570,8 +714,13 @@ window.d3 = {
         return window.gunKeyPair;
       }
 
-      // Cerca in Gun
-      console.log(`Cerco keypair per ${address} in Gun...`);
+      // Cerca in Gun - prova prima con l'indirizzo originale, poi con quello normalizzato
+      const addressesToTry = [address];
+      if (address !== normalizedAddress) {
+        addressesToTry.push(normalizedAddress);
+      }
+
+      console.log(`Cerco keypair per ${addressesToTry.join(" e ")} in Gun...`);
 
       // Recupera la parte pubblica dal database
       return new Promise((resolve, reject) => {
@@ -581,28 +730,84 @@ window.d3 = {
           resolve(null);
         }, GUN_TIMEOUT); // 10 secondi di timeout
 
-        window.gun.get(`skeypair${address}`).once((data) => {
-          clearTimeout(timeoutId);
+        let attempts = 0;
+        const maxAttempts = addressesToTry.length;
 
-          console.log("Dati recuperati da Gun:", data);
+        const tryNextAddress = () => {
+          if (attempts >= maxAttempts) {
+            clearTimeout(timeoutId);
+            console.warn(
+              `Nessun keypair trovato per ${address} in Gun dopo ${maxAttempts} tentativi`
+            );
 
-          // Se non abbiamo dati o dati vuoti, risolve con null
-          if (
-            !data ||
-            (typeof data === "object" && Object.keys(data).length === 0)
-          ) {
-            console.warn(`Nessun keypair trovato per ${address} in Gun`);
-            resolve(null);
+            // 🔍 NUOVO: Se non troviamo il keypair, proviamo a registrarlo se è l'utente corrente
+            if (isCurrentUser && window.gunKeyPair) {
+              console.log(
+                "🔄 Tentativo di registrazione automatica per utente corrente..."
+              );
+              this.forceRegisterKeypair(address)
+                .then((success) => {
+                  if (success) {
+                    // Riprova a recuperare il keypair dopo la registrazione
+                    setTimeout(() => {
+                      this.getKeypair(address)
+                        .then(resolve)
+                        .catch(() => resolve(null));
+                    }, 1000);
+                  } else {
+                    resolve(null);
+                  }
+                })
+                .catch(() => resolve(null));
+            } else {
+              resolve(null);
+            }
             return;
           }
 
-          console.log("Keypair pubblico da Gun per:", address, {
-            pub: data.pub ? data.pub.substring(0, 10) + "..." : "mancante",
-            epub: data.epub ? data.epub.substring(0, 10) + "..." : "mancante",
-          });
+          const currentAddress = addressesToTry[attempts];
+          attempts++;
 
-          resolve(data);
-        });
+          console.log(
+            `Tentativo ${attempts}/${maxAttempts}: cercando keypair per ${currentAddress}`
+          );
+
+          window.gun
+            .get("shogun")
+            .get(`skeypair${currentAddress}`)
+            .once((data) => {
+              console.log(
+                `Dati recuperati da Gun per ${currentAddress}:`,
+                data
+              );
+
+              // Se non abbiamo dati o dati vuoti, prova il prossimo indirizzo
+              if (
+                !data ||
+                (typeof data === "object" && Object.keys(data).length === 0)
+              ) {
+                console.warn(
+                  `Nessun keypair trovato per ${currentAddress} in Gun, provo il prossimo...`
+                );
+                tryNextAddress();
+                return;
+              }
+
+              // Se abbiamo trovato il keypair, risolve con i dati
+              clearTimeout(timeoutId);
+              console.log("Keypair pubblico da Gun per:", currentAddress, {
+                pub: data.pub ? data.pub.substring(0, 10) + "..." : "mancante",
+                epub: data.epub
+                  ? data.epub.substring(0, 10) + "..."
+                  : "mancante",
+              });
+
+              resolve(data);
+            });
+        };
+
+        // Inizia con il primo indirizzo
+        tryNextAddress();
       });
     } catch (error) {
       console.error("Errore durante la ricerca del keypair:", error);
@@ -814,14 +1019,96 @@ window.d3 = {
       const recipientAddress = to[0];
 
       // Verifica che il destinatario abbia registrato una chiave pubblica
-      const recipientPubKey = await this.getKeypair(recipientAddress);
+      let recipientPubKey = await this.getKeypair(recipientAddress);
 
+      // Se il destinatario non ha un keypair, proviamo a registrarlo se è l'utente corrente
       if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+        console.warn(
+          `Il destinatario ${recipientAddress} non ha un keypair registrato.`
+        );
+
+        // Verifica se il destinatario è l'utente corrente
+        const currentUserAddress = await provider.getSigner().getAddress();
+        if (
+          recipientAddress.toLowerCase() === currentUserAddress.toLowerCase()
+        ) {
+          console.log(
+            "Il destinatario è l'utente corrente, provo a registrare il keypair..."
+          );
+
+          // Forza la registrazione del keypair
+          const registrationResult = await this.ensureKeypairRegistered();
+          if (registrationResult) {
+            console.log(
+              "✅ Keypair registrato con successo, riprovo a recuperarlo..."
+            );
+            // Riprova a recuperare il keypair
+            const retryRecipientPubKey = await this.getKeypair(
+              recipientAddress
+            );
+            if (
+              retryRecipientPubKey &&
+              retryRecipientPubKey.pub &&
+              retryRecipientPubKey.epub
+            ) {
+              console.log(
+                "✅ Keypair recuperato con successo dopo la registrazione"
+              );
+              // Usa il keypair appena registrato
+              recipientPubKey = retryRecipientPubKey;
+            }
+          }
+        }
+      }
+
+      // Se il destinatario non ha un keypair, usiamo un fallback
+      if (!recipientPubKey || !recipientPubKey.pub || !recipientPubKey.epub) {
+        console.warn(
+          `Il destinatario ${recipientAddress} non ha un keypair registrato. Usando fallback...`
+        );
+
+        // Fallback: invia il messaggio in chiaro con un avviso
+        const fallbackPayload = {
+          text: payload,
+          warning:
+            "MESSAGGIO NON CRITTOGRAFATO - Il destinatario non ha registrato le sue chiavi pubbliche",
+          timestamp: Date.now(),
+          from: sender_address,
+          to: recipientAddress,
+          encryptedMSG: "ENCRYPT_FAILED_USE_PLAINTEXT",
+        };
+
+        // Normalizza gli indirizzi per il confronto case-insensitive
+        const normalizedRecipient = recipientAddress.toLowerCase();
+        const normalizedSender = sender_address.toLowerCase();
+
+        // Crea un identificatore univoco per la conversazione ordinando gli indirizzi
+        const participants = [normalizedSender, normalizedRecipient].sort();
+        const sortedParticipants = participants.join("");
+
+        // Genera il namespace della chat
+        const chatNamespace = this.HashNamespace(sortedParticipants);
+
+        // Ottieni il riferimento Gun alla chat
+        const chat = window.gun.get("shogun").get(chatNamespace);
+
+        // Genera un ID univoco per il messaggio
+        const messageKey = `msg_${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(2, 9)}`;
+
+        // Salva il messaggio in chiaro
+        chat.get(messageKey).put(fallbackPayload);
+
+        console.log(
+          `Messaggio inviato in chiaro a ${recipientAddress} (fallback mode)`
+        );
+
         return {
-          sent: false,
-          why: new Error(
-            `Il destinatario ${recipientAddress} non ha un keypair valido`
-          ),
+          sent: true,
+          warning:
+            "Messaggio inviato in chiaro - il destinatario non ha chiavi pubbliche registrate",
+          fallback: true,
         };
       }
 
@@ -901,7 +1188,7 @@ window.d3 = {
       const chatNamespace = this.HashNamespace(sortedParticipants);
 
       // Ottieni il riferimento Gun alla chat
-      const chat = window.gun.get(chatNamespace);
+      const chat = window.gun.get("shogun").get(chatNamespace);
 
       // Genera un ID univoco per il messaggio
       const messageKey = `msg_${Date.now()}_${Math.random()
@@ -1042,11 +1329,11 @@ window.d3 = {
       return;
     }
 
-    const normalizedRecipient = userAddress.toLowerCase();
-    const normalizedSender = recipientAddress.toLowerCase();
+    const normalizedUser = userAddress.toLowerCase();
+    const normalizedRecipient = recipientAddress.toLowerCase();
 
     // Crea un identificatore univoco per la conversazione ordinando gli indirizzi
-    const participants = [normalizedSender, normalizedRecipient].sort();
+    const participants = [normalizedRecipient, normalizedUser].sort();
     const sortedParticipants = participants.join("");
     const chatNamespace = this.HashNamespace(sortedParticipants);
 
@@ -1073,39 +1360,135 @@ window.d3 = {
 
         // Verifica se il messaggio è già stato processato
         if (processedMessagesMap.has(messageIdentifier)) {
-          console.log(
-            `RECEIVEMSGS - Messaggio ${messageIdentifier} già processato, ignorato`
-          );
+          if (window.d3?.debug?.logLevel === "verbose") {
+            console.log(
+              `RECEIVEMSGS - Messaggio ${messageIdentifier} già processato, ignorato`
+            );
+          }
           return;
         }
 
-        // Controlla se è un messaggio inviato dall'utente corrente
-        // Questo aiuta a prevenire la duplicazione
+        // ✅ CORRETTO: Logica corretta per determinare se il messaggio è inviato dall'utente corrente
         const messageFrom = data.from && data.from.toLowerCase();
-        const isSentByMe = messageFrom === normalizedRecipient;
+        const messageTo = data.to && data.to.toLowerCase();
 
-        // Se è un messaggio inviato da noi, controlliamo anche che non sia già in window.displayedMessages
-        if (
-          isSentByMe &&
-          window.displayedMessages &&
-          window.displayedMessages.has(key)
-        ) {
-          console.log(
-            `RECEIVEMSGS - Messaggio ${key} inviato da me e già visualizzato, ignorato`
-          );
+        // Un messaggio è inviato da noi se il mittente (from) è il nostro indirizzo
+        const isSentByMe = messageFrom === normalizedUser;
+
+        // Se è un messaggio inviato da noi, non processarlo qui (è già stato visualizzato)
+        if (isSentByMe) {
+          if (window.d3?.debug?.logLevel === "verbose") {
+            console.log(
+              `RECEIVEMSGS - Messaggio ${key} inviato da me, ignorato`
+            );
+          }
           return;
         }
 
         // Se il messaggio inizia con "sent_", presumiamo che sia un messaggio che abbiamo inviato noi
         if (key.startsWith("sent_")) {
-          console.log(
-            `RECEIVEMSGS - Messaggio ${key} è un sent_ message, ignorato`
-          );
+          if (window.d3?.debug?.logLevel === "verbose") {
+            console.log(
+              `RECEIVEMSGS - Messaggio ${key} è un sent_ message, ignorato`
+            );
+          }
           return;
         }
 
-        // Marca il messaggio come processato
-        processedMessagesMap.set(messageIdentifier, Date.now());
+        // 🔍 MIGLIORATO: Controllo di deduplicazione più intelligente
+        // Usa un identificatore più specifico che include mittente e destinatario
+        const messageContent =
+          data.text ||
+          data.encryptedMSG ||
+          data.message ||
+          data.content ||
+          data.raw_payload;
+        const messageTimestamp = data.date || data.sent_timestamp || Date.now();
+
+        // 🔍 NUOVO: Controllo più aggressivo per messaggi duplicati
+        // Se il messaggio ha lo stesso contenuto e mittente di un messaggio recente (ultimi 5 secondi), è un duplicato
+        const timeWindow = 5000; // 5 secondi
+        const now = Date.now();
+
+        if (window.recentMessages) {
+          // Controlla tutti i messaggi recenti per duplicati
+          for (const [key, timestamp] of window.recentMessages.entries()) {
+            if (now - timestamp < timeWindow) {
+              // Se la chiave contiene lo stesso contenuto e mittente, è un duplicato
+              if (key.includes(messageContent) && key.includes(messageFrom)) {
+                if (window.d3?.debug?.logLevel === "verbose") {
+                  console.log(
+                    `RECEIVEMSGS - DUPLICATO RILEVATO: ${messageContent} da ${messageFrom} (già processato ${Math.round(
+                      (now - timestamp) / 1000
+                    )}s fa)`
+                  );
+                }
+                return; // Ignora il messaggio duplicato
+              }
+            }
+          }
+        }
+
+        // 🔍 NUOVO: Controllo per messaggi inviati localmente
+        // Se il messaggio è stato inviato localmente, non mostrarlo di nuovo
+        if (window.sentMessages) {
+          const messageContent =
+            data.text ||
+            data.encryptedMSG ||
+            data.message ||
+            data.content ||
+            data.raw_payload;
+          const now = Date.now();
+
+          // Controlla se questo messaggio è stato inviato localmente negli ultimi 10 secondi
+          for (const [msgId, sentInfo] of window.sentMessages.entries()) {
+            if (now - sentInfo.timestamp < 10000) {
+              // 10 secondi
+              if (
+                sentInfo.content === messageContent &&
+                sentInfo.recipient.toLowerCase() === messageFrom
+              ) {
+                if (window.d3?.debug?.logLevel === "verbose") {
+                  console.log(
+                    `RECEIVEMSGS - Ignorando messaggio inviato localmente: ${messageContent}`
+                  );
+                }
+                return; // Ignora il messaggio inviato localmente
+              }
+            }
+          }
+        }
+
+        // 🔍 MIGLIORATO: Controllo di deduplicazione più intelligente
+        // Crea una chiave più specifica che include mittente, destinatario e contenuto
+        const deduplicationKey = `${messageFrom}_${messageTo}_${messageContent}_${messageTimestamp}`;
+
+        if (
+          window.recentMessages &&
+          window.recentMessages.has(deduplicationKey)
+        ) {
+          if (window.d3?.debug?.logLevel === "verbose") {
+            console.log(
+              `RECEIVEMSGS - Messaggio duplicato rilevato e ignorato: ${messageContent}`
+            );
+          }
+          return;
+        }
+
+        // Inizializza la mappa dei messaggi recenti se non esiste
+        if (!window.recentMessages) {
+          window.recentMessages = new Map();
+        }
+
+        // Marca questo messaggio come recentemente processato
+        window.recentMessages.set(deduplicationKey, Date.now());
+
+        // Pulisci i messaggi vecchi (più di 10 secondi invece di 30)
+        setTimeout(() => {
+          if (window.recentMessages) {
+            window.recentMessages.delete(deduplicationKey);
+          }
+        }, 10000);
 
         // Verifichiamo vari campi possibili per i messaggi
         if (
@@ -1127,7 +1510,34 @@ window.d3 = {
             `RECEIVEMSGS - Errore decrittazione messaggio ${key}:`,
             error.message
           );
-          return;
+
+          // Fallback: prova a usare campi in chiaro se disponibili
+          if (data.text && data.text.trim()) {
+            decrypted = data.text;
+            console.log(
+              `RECEIVEMSGS - Usando fallback text per messaggio ${key}`
+            );
+          } else if (data.message && data.message.trim()) {
+            decrypted = data.message;
+            console.log(
+              `RECEIVEMSGS - Usando fallback message per messaggio ${key}`
+            );
+          } else if (data.content && data.content.trim()) {
+            decrypted = data.content;
+            console.log(
+              `RECEIVEMSGS - Usando fallback content per messaggio ${key}`
+            );
+          } else if (data.raw_payload && data.raw_payload.trim()) {
+            decrypted = data.raw_payload;
+            console.log(
+              `RECEIVEMSGS - Usando fallback raw_payload per messaggio ${key}`
+            );
+          } else {
+            console.warn(
+              `RECEIVEMSGS - Nessun contenuto disponibile per messaggio ${key}`
+            );
+            return;
+          }
         }
 
         if (!decrypted) {
@@ -1140,17 +1550,20 @@ window.d3 = {
         // Aggiungi il timestamp se non presente
         const timestamp = data.date || data.sent_timestamp || Date.now();
 
-        // Chiama il callback con tutte le informazioni necessarie
+        // ✅ CORRETTO: Chiama il callback con le informazioni corrette
         if (typeof callback === "function") {
           callback({
             originalData: data,
             messageKey: key,
             decrypted,
-            isSentByMe,
+            isSentByMe: false, // Se arriviamo qui, il messaggio non è inviato da noi
             timestamp,
-            sender: isSentByMe ? normalizedRecipient : normalizedSender,
+            sender: messageFrom, // Il mittente reale del messaggio
           });
         }
+
+        // Marca il messaggio come processato
+        processedMessagesMap.set(messageIdentifier, Date.now());
       } catch (error) {
         console.error(
           `RECEIVEMSGS - Errore nella gestione del messaggio:`,
@@ -1160,7 +1573,7 @@ window.d3 = {
     };
 
     // Usa gun.get().map().on() per ascoltare tutti i messaggi nel namespace
-    const chatRef = window.gun.get(chatNamespace);
+    const chatRef = window.gun.get("shogun").get(chatNamespace);
 
     // Ascolta i nuovi messaggi e gli aggiornamenti
     chatRef.map().on(processMessage);
@@ -1192,25 +1605,28 @@ window.d3 = {
   },
 
   decryptMessage: async function (messageData, gunKeypair) {
-    console.log(
-      "Tentativo di decrittazione:",
-      messageData
-        ? {
-            from: messageData.from && messageData.from.substring(0, 10) + "...",
-            to: messageData.to && messageData.to.substring(0, 10) + "...",
-            date: messageData.date
-              ? new Date(messageData.date).toLocaleString()
-              : "N/A",
-            hasEncryptedMSG: !!messageData.encryptedMSG,
-            hasPlaintext: !!(
-              messageData.text ||
-              messageData.message ||
-              messageData.content ||
-              messageData.raw_payload
-            ),
-          }
-        : "Dati messaggio non validi"
-    );
+    if (window.d3?.debug?.logLevel === "verbose") {
+      console.log(
+        "Tentativo di decrittazione:",
+        messageData
+          ? {
+              from:
+                messageData.from && messageData.from.substring(0, 10) + "...",
+              to: messageData.to && messageData.to.substring(0, 10) + "...",
+              date: messageData.date
+                ? new Date(messageData.date).toLocaleString()
+                : "N/A",
+              hasEncryptedMSG: !!messageData.encryptedMSG,
+              hasPlaintext: !!(
+                messageData.text ||
+                messageData.message ||
+                messageData.content ||
+                messageData.raw_payload
+              ),
+            }
+          : "Dati messaggio non validi"
+      );
+    }
 
     if (!messageData) {
       console.error("Dati del messaggio non presenti");
@@ -1641,20 +2057,23 @@ window.d3 = {
         const chatNamespace = this.HashNamespace(sortedParticipants);
 
         // Controlla se ci sono messaggi
-        window.gun.get(chatNamespace).once((data) => {
-          const hasMessages = data && Object.keys(data).length > 2;
+        window.gun
+          .get("shogun")
+          .get(chatNamespace)
+          .once((data) => {
+            const hasMessages = data && Object.keys(data).length > 2;
 
-          if (hasMessages) {
-            console.log(`✓ Conversazione attiva trovata in ${chatNamespace}`);
-          } else {
-            console.log(`✗ Nessun messaggio trovato in ${chatNamespace}`);
-          }
+            if (hasMessages) {
+              console.log(`✓ Conversazione attiva trovata in ${chatNamespace}`);
+            } else {
+              console.log(`✗ Nessun messaggio trovato in ${chatNamespace}`);
+            }
 
-          conversations.push({
-            address,
-            hasMessages,
+            conversations.push({
+              address,
+              hasMessages,
+            });
           });
-        });
       } catch (e) {
         console.error(`Errore nel verificare i messaggi per ${address}:`, e);
       }
@@ -1728,6 +2147,7 @@ window.d3 = {
         }, 3000);
 
         window.gun
+          .get("shogun")
           .get("skeypair")
           .map()
           .once((data, key) => {
@@ -1761,13 +2181,13 @@ window.d3 = {
     // Pulisce un keypair specifico o tutti i keypair da Gun
     cleanGunKeypairs: function (address = null) {
       if (address) {
-        window.gun.get(`skeypair${address}`).put(null);
+        window.gun.get("shogun").get(`skeypair${address}`).put(null);
         return `Rimosso keypair per ${address} da Gun`;
       } else {
         // Recupera prima tutti gli indirizzi, poi rimuove i keypair
         return d3.getAllRegisteredAddresses().then((addresses) => {
           for (const addr of addresses) {
-            window.gun.get(`skeypair${addr}`).put(null);
+            window.gun.get("shogun").get(`skeypair${addr}`).put(null);
           }
           return `Rimossi ${addresses.length} keypair da Gun`;
         });
@@ -1809,6 +2229,7 @@ window.d3 = {
 
           // Esplora tutti i messaggi
           window.gun
+            .get("shogun")
             .get(chatNamespace)
             .map()
             .once((msgData, key) => {
@@ -1851,12 +2272,259 @@ window.d3 = {
 
     return plugins;
   },
+
+  // Funzione per registrare automaticamente il keypair se non è già registrato
+  ensureKeypairRegistered: async function () {
+    try {
+      const provider = await this.getProvider();
+      if (!provider) {
+        console.error("Provider non disponibile per registrazione keypair");
+        return false;
+      }
+
+      const userAddress = await provider.getSigner().getAddress();
+      console.log("🔍 Verificando registrazione keypair per:", userAddress);
+
+      // Verifica se il keypair è già registrato
+      const hasRegistered = await this.hasKeypair(userAddress);
+      console.log("🔍 Keypair già registrato?", hasRegistered);
+
+      if (hasRegistered) {
+        console.log("✅ Keypair già registrato per:", userAddress);
+        return true;
+      }
+
+      // Se non è registrato e abbiamo un keypair in memoria, registralo
+      if (
+        window.gunKeyPair &&
+        window.gunKeyPair.pub &&
+        window.gunKeyPair.epub
+      ) {
+        console.log("🔄 Registrando keypair per:", userAddress);
+
+        // Retry mechanism per la registrazione
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        while (retryCount < maxRetries) {
+          try {
+            await this.registerKeypair(userAddress, {
+              pub: window.gunKeyPair.pub,
+              epub: window.gunKeyPair.epub,
+            });
+
+            // Verifica che la registrazione sia andata a buon fine
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Attendi 1 secondo
+            const verifyRegistration = await this.hasKeypair(userAddress);
+
+            if (verifyRegistration) {
+              console.log(
+                "✅ Keypair registrato con successo per:",
+                userAddress
+              );
+              return true;
+            } else {
+              console.warn(
+                `⚠️ Tentativo ${retryCount + 1} fallito, riprovo...`
+              );
+              retryCount++;
+            }
+          } catch (error) {
+            console.error(`❌ Errore nel tentativo ${retryCount + 1}:`, error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise((resolve) => setTimeout(resolve, 2000)); // Attendi 2 secondi prima del retry
+            }
+          }
+        }
+
+        console.error(
+          "❌ Impossibile registrare il keypair dopo",
+          maxRetries,
+          "tentativi"
+        );
+        return false;
+      }
+
+      console.warn("⚠️ Nessun keypair disponibile per la registrazione");
+      return false;
+    } catch (error) {
+      console.error(
+        "❌ Errore durante la registrazione automatica del keypair:",
+        error
+      );
+      return false;
+    }
+  },
+
+  // Funzione di debug per verificare lo stato dei keypair
+  debugKeypairStatus: async function (address) {
+    try {
+      console.log("🔍 DEBUG: Verificando stato keypair per:", address);
+
+      const provider = await this.getProvider();
+      if (!provider) {
+        console.error("❌ Provider non disponibile");
+        return { error: "Provider non disponibile" };
+      }
+
+      const currentUserAddress = await provider.getSigner().getAddress();
+      console.log("🔍 Indirizzo utente corrente:", currentUserAddress);
+      console.log("🔍 Indirizzo da verificare:", address);
+      console.log(
+        "🔍 È lo stesso indirizzo?",
+        currentUserAddress.toLowerCase() === address.toLowerCase()
+      );
+
+      // Verifica keypair in memoria
+      console.log("🔍 Keypair in memoria:", {
+        hasKeypair: !!window.gunKeyPair,
+        hasPub: !!(window.gunKeyPair && window.gunKeyPair.pub),
+        hasEpub: !!(window.gunKeyPair && window.gunKeyPair.epub),
+        pubPreview: window.gunKeyPair?.pub?.substring(0, 20) + "...",
+        epubPreview: window.gunKeyPair?.epub?.substring(0, 20) + "...",
+      });
+
+      // Verifica registrazione nel database
+      const hasRegistered = await this.hasKeypair(address);
+      console.log("🔍 Keypair registrato nel database:", hasRegistered);
+
+      // Prova a recuperare il keypair dal database
+      const retrievedKeypair = await this.getKeypair(address);
+      console.log("🔍 Keypair recuperato dal database:", {
+        found: !!retrievedKeypair,
+        hasPub: !!(retrievedKeypair && retrievedKeypair.pub),
+        hasEpub: !!(retrievedKeypair && retrievedKeypair.epub),
+        pubPreview: retrievedKeypair?.pub?.substring(0, 20) + "...",
+        epubPreview: retrievedKeypair?.epub?.substring(0, 20) + "...",
+      });
+
+      // 🔍 NUOVO: Debug del percorso esatto
+      console.log("🔍 DEBUG PATH: Verificando percorso esatto...");
+      const normalizedAddress = address.toLowerCase();
+      const pathsToCheck = [
+        `skeypair${address}`,
+        `skeypair${normalizedAddress}`,
+      ];
+
+      for (const path of pathsToCheck) {
+        console.log(`🔍 Controllando percorso: shogun/${path}`);
+        try {
+          const pathData = await new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+              resolve({ error: "timeout" });
+            }, 3000);
+
+            window.gun
+              .get("shogun")
+              .get(path)
+              .once((data) => {
+                clearTimeout(timeoutId);
+                resolve(data);
+              });
+          });
+
+          console.log(`🔍 Dati nel percorso ${path}:`, pathData);
+        } catch (error) {
+          console.error(`🔍 Errore nel percorso ${path}:`, error);
+        }
+      }
+
+      return {
+        address,
+        isCurrentUser:
+          currentUserAddress.toLowerCase() === address.toLowerCase(),
+        hasKeypairInMemory: !!window.gunKeyPair,
+        hasKeypairInDatabase: hasRegistered,
+        retrievedKeypair: !!retrievedKeypair,
+        memoryKeypair: window.gunKeyPair
+          ? {
+              hasPub: !!window.gunKeyPair.pub,
+              hasEpub: !!window.gunKeyPair.epub,
+            }
+          : null,
+        databaseKeypair: retrievedKeypair
+          ? {
+              hasPub: !!retrievedKeypair.pub,
+              hasEpub: !!retrievedKeypair.epub,
+            }
+          : null,
+      };
+    } catch (error) {
+      console.error("❌ Errore durante il debug del keypair:", error);
+      return { error: error.message };
+    }
+  },
+
+  // Funzione per eliminare un keypair
+  deleteKeypair: function (address) {
+    try {
+      console.log("Eliminando keypair per:", address);
+
+      // Elimina con l'indirizzo originale
+      window.gun.get("shogun").get(`skeypair${address}`).put(null);
+
+      // Elimina anche con l'indirizzo normalizzato
+      const normalizedAddress = address.toLowerCase();
+      if (address !== normalizedAddress) {
+        window.gun.get("shogun").get(`skeypair${normalizedAddress}`).put(null);
+      }
+
+      console.log("Keypair eliminato per:", address);
+      return true;
+    } catch (error) {
+      console.error("Errore durante l'eliminazione del keypair:", error);
+      return false;
+    }
+  },
+
+  // Funzione per forzare la registrazione di un keypair per qualsiasi indirizzo
+  forceRegisterKeypair: async function (address) {
+    try {
+      console.log("🔄 FORZANDO registrazione keypair per:", address);
+
+      // Verifica se abbiamo un keypair in memoria per l'utente corrente
+      if (
+        !window.gunKeyPair ||
+        !window.gunKeyPair.pub ||
+        !window.gunKeyPair.epub
+      ) {
+        console.error(
+          "❌ Nessun keypair disponibile in memoria per la registrazione"
+        );
+        return false;
+      }
+
+      // Registra il keypair per l'indirizzo specificato
+      await this.registerKeypair(address, {
+        pub: window.gunKeyPair.pub,
+        epub: window.gunKeyPair.epub,
+      });
+
+      // Verifica che la registrazione sia andata a buon fine
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const verifyRegistration = await this.hasKeypair(address);
+
+      if (verifyRegistration) {
+        console.log("✅ Keypair forzatamente registrato per:", address);
+        return true;
+      } else {
+        console.error("❌ Registrazione forzata fallita per:", address);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Errore durante la registrazione forzata:", error);
+      return false;
+    }
+  },
 };
 
 // ✅ AGGIORNATO: Inizializza il debug e Gun automaticamente
 (async function () {
   // Imposta il livello di log predefinito
-  window.d3.debug.setLogLevel("error");
+  if (window.d3 && window.d3.debug) {
+    window.d3.debug.setLogLevel("error");
+  }
 
   // ✅ NUOVO: Attendi l'inizializzazione di ShogunCore
   try {

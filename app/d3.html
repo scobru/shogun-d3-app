@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +15,7 @@
             --light-gray-light: #F1F2F6;
             --message-bg-light: #F8F9FA;
             --shadow-light: rgba(0, 0, 0, 0.05);
-            
+
             /* Dark theme */
             --primary-color-dark: #FFFFFF;
             --secondary-color-dark: #CBD5E0;
@@ -23,12 +24,12 @@
             --light-gray-dark: #2D3748;
             --message-bg-dark: #2D3748;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            
+
             /* Common variables */
             --border-radius: 12px;
             --spacing: 12px;
             --transition: all 0.2s ease;
-            
+
             /* Default theme (light) */
             --primary-color: var(--primary-color-light);
             --secondary-color: var(--secondary-color-light);
@@ -98,11 +99,47 @@
             display: flex;
         }
 
+        /* Logging control panel */
+        .logging-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 12px;
+        }
+
+        [data-theme="dark"] .logging-controls {
+            background: rgba(26, 32, 44, 0.9);
+            color: var(--primary-color-dark);
+        }
+
+        .logging-controls select {
+            background: var(--bg-color);
+            color: var(--primary-color);
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .logging-controls label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
         .header .items-center {
             align-items: center;
         }
 
-        .header .space-x-3 > * + * {
+        .header .space-x-3>*+* {
             margin-left: 12px;
         }
 
@@ -195,11 +232,11 @@
             justify-content: center;
         }
 
-        .connect-section .space-y-4 > * + * {
+        .connect-section .space-y-4>*+* {
             margin-top: 12px;
         }
 
-        .connect-section .space-x-2 > * + * {
+        .connect-section .space-x-2>*+* {
             margin-left: 6px;
         }
 
@@ -296,6 +333,21 @@
             display: none;
         }
 
+        /* ✅ NUOVO: Mantieni i pulsanti di debug sempre visibili */
+        .connect-section.connected .debug-buttons {
+            display: flex !important;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .connect-section.connected .debug-buttons button {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            min-width: auto;
+        }
+
         button {
             background-color: var(--accent-color);
             color: white;
@@ -356,11 +408,44 @@
             padding: 16px;
             height: 100%;
             border-right: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            flex-direction: column;
         }
 
-        [data-theme="dark"] .conversations-list {
-            background: rgba(45, 55, 72, 0.8);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        .conversations-header {
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .conversations-header h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .new-conversation-btn {
+            width: 100%;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .new-conversation-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .conversations-content {
+            flex: 1;
+            overflow-y: auto;
         }
 
         .conversation-item {
@@ -531,7 +616,7 @@
             color: #FFFFFF;
             margin-left: auto;
             border-bottom-right-radius: 6px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
         }
 
@@ -556,7 +641,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .message.sent .meta {
             color: rgba(255, 255, 255, 0.9);
             text-shadow: none;
@@ -568,6 +653,40 @@
 
         [data-theme="dark"] .message.received .meta {
             color: #A0AEC0;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .message.sent .message-header {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message.received .message-header {
+            color: #6B7280;
+        }
+
+        [data-theme="dark"] .message.received .message-header {
+            color: #A0AEC0;
+        }
+
+        .message-header .sender {
+            font-weight: 600;
+        }
+
+        .message-header .timestamp {
+            font-size: 0.7rem;
+        }
+
+        .message-content {
+            word-wrap: break-word;
+            line-height: 1.4;
         }
 
         .input-area {
@@ -640,10 +759,14 @@
         }
 
         @keyframes typingPulse {
-            0%, 60%, 100% {
+
+            0%,
+            60%,
+            100% {
                 opacity: 0.3;
                 transform: scale(0.8);
             }
+
             30% {
                 opacity: 1;
                 transform: scale(1.1);
@@ -688,14 +811,32 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes pulse {
-            0% { opacity: 0.5; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.1); }
-            100% { opacity: 0.5; transform: scale(0.8); }
+            0% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+
+            100% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
         }
 
         .wallet-info {
@@ -783,7 +924,7 @@
             align-items: center;
         }
 
-        .info .space-x-2 > * + * {
+        .info .space-x-2>*+* {
             margin-left: 8px;
         }
 
@@ -982,15 +1123,62 @@
             font-weight: 500;
             margin-bottom: 10px;
         }
+
+        /* Tab styles for restore modal */
+        .tab-button {
+            background: var(--light-gray);
+            border: 1px solid var(--secondary-color);
+            color: var(--primary-color);
+            padding: 8px 16px;
+            margin-right: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .tab-button.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .tab-button:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: block;
+        }
+
+        .tab-content.hidden {
+            display: none;
+        }
+
+        [data-theme="dark"] .conversations-list {
+            background: rgba(45, 55, 72, 0.8);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .conversations-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .conversations-header h3 {
+            color: var(--primary-color-dark);
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
             <div class="flex items-center space-x-3">
                 <img src="logo.svg" alt="Shogun Logo" class="h-12 w-12" />
                 <div>
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    <h1
+                        class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                         d3
                     </h1>
                     <p class="text-sm text-gray-600">Decentralized Chat</p>
@@ -998,44 +1186,75 @@
             </div>
             <button class="theme-toggle" id="themeToggle">🌙</button>
         </div>
-        
+
         <div id="wallet-section" class="connect-section">
             <div class="button-group">
                 <div class="flex items-center space-x-2 mb-4">
                     <img src="logo.svg" alt="Shogun" class="h-8 w-8" />
-                    <span class="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    <span
+                        class="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                         Connect to Shogun Network
                     </span>
                 </div>
-                
+
                 <div class="flex flex-wrap gap-3 justify-center">
-                    <button id="connectWallet" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    <button id="connectWallet"
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
                         🔗 Connect Wallet
                     </button>
-                    <button id="refreshChat" class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    <button id="refreshChat"
+                        class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
                         🔄 Refresh Chat
                     </button>
-                    <button id="backupKeypair" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg" style="display: none;">
-                        💾 Backup Keypair
-                    </button>
-                    <button id="restoreKeypair" class="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
-                        📂 Restore Keypair
+                    <button id="disconnectWallet"
+                        class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+                        style="display: none;">
+                        🚪 Disconnect
                     </button>
                 </div>
             </div>
-            
+
+            <!-- ✅ NUOVO: Sezione separata per i pulsanti di debug e utility -->
+            <div class="debug-buttons">
+                <button id="backupKeypair"
+                    class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    style="display: none;">
+                    💾 Backup Keypair
+                </button>
+                <button id="registerKeypair"
+                    class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    🔑 Register Keypair
+                </button>
+                <button id="debugKeypair"
+                    class="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    🔍 Debug Keypair
+                </button>
+                <button id="clearAllMessages"
+                    class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    🗑️ Clear All Messages
+                </button>
+                <button id="restoreKeypair"
+                    class="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    📂 Restore Keypair
+                </button>
+            </div>
+
             <div class="status-group">
-                <div id="walletInfo" class="wallet-info" style="margin: 0; padding: 8px 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 20px; color: #22C55E; font-size: 0.9rem;"></div>
-                
-                <div class="connection-status" id="gunStatus" style="margin: 0; padding: 8px 16px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 20px; color: #8B5CF6; font-size: 0.9rem;">
+                <div id="walletInfo" class="wallet-info"
+                    style="margin: 0; padding: 8px 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 20px; color: #22C55E; font-size: 0.9rem;">
+                </div>
+
+                <div class="connection-status" id="gunStatus"
+                    style="margin: 0; padding: 8px 16px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 20px; color: #8B5CF6; font-size: 0.9rem;">
                     <span class="status-indicator connecting"></span>
                     <span>Connecting to Gun Network...</span>
                 </div>
-                
+
                 <div style="font-size: 0.85rem;">
                     <div class="flex items-center justify-center space-x-2">
                         <span class="text-gray-600">Debug:</span>
-                        <select id="logLevel" class="px-3 py-1 rounded-md bg-white border border-gray-300 text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                        <select id="logLevel"
+                            class="px-3 py-1 rounded-md bg-white border border-gray-300 text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
                             <option value="none">None</option>
                             <option value="error">Error</option>
                             <option value="warn">Warning</option>
@@ -1047,11 +1266,18 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="chatSection" class="chat-section">
             <div class="chat-wrapper">
                 <div class="conversations-list" id="conversationsList">
-                    <!-- Conversations will appear here -->
+                    <div class="conversations-header">
+                        <h3>Conversations</h3>
+                        <button class="new-conversation-btn" onclick="openNewConversationModal()">New
+                            Conversation</button>
+                    </div>
+                    <div class="conversations-content" id="conversationsContent">
+                        <!-- Conversations will appear here -->
+                    </div>
                 </div>
                 <div class="messages">
                     <div class="messages-header">
@@ -1065,9 +1291,14 @@
                             <span>Shogun-D3 Chat</span>
                         </div>
                         <div class="flex-1">
-                            <input type="text" id="recipientAddress" placeholder="Enter recipient's ETH address (0x...)" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono">
+                            <input type="text" id="recipientAddress" placeholder="Enter recipient's ETH address (0x...)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono">
                         </div>
+                        <button id="refreshConversation"
+                            class="ml-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
+                            title="Refresh conversation in chronological order">
+                            🔄
+                        </button>
                     </div>
                     <div class="messages-container" id="messagesContainer">
                         <!-- Messages will appear here -->
@@ -1090,20 +1321,23 @@
             </div>
             <div class="modal-body">
                 <div class="backup-info">
-                    <strong>⚠️ Important:</strong> This backup contains your private keys. Store it securely and never share it with anyone.
+                    <strong>⚠️ Important:</strong> This backup contains your private keys. Store it securely and never
+                    share it with anyone.
                 </div>
-                
+
                 <label for="backupPassword">Password (optional, but recommended):</label>
                 <input type="password" id="backupPassword" placeholder="Enter a strong password to encrypt your backup">
-                
+
                 <label for="backupData">Backup Data:</label>
                 <textarea id="backupData" readonly placeholder="Your backup data will appear here..."></textarea>
-                
+
                 <div style="text-align: center; margin-top: 10px;">
-                    <button type="button" onclick="downloadBackup()" style="background: linear-gradient(135deg, #10B981, #059669); margin-right: 10px;">
+                    <button type="button" onclick="downloadBackup()"
+                        style="background: linear-gradient(135deg, #10B981, #059669); margin-right: 10px;">
                         📥 Download as File
                     </button>
-                    <button type="button" onclick="copyBackupToClipboard()" style="background: linear-gradient(135deg, #6366F1, #4F46E5);">
+                    <button type="button" onclick="copyBackupToClipboard()"
+                        style="background: linear-gradient(135deg, #6366F1, #4F46E5);">
                         📋 Copy to Clipboard
                     </button>
                 </div>
@@ -1124,20 +1358,58 @@
             </div>
             <div class="modal-body">
                 <div class="warning-text">
-                    ⚠️ Warning: Restoring a keypair will replace your current keypair. Make sure you have a backup first!
+                    ⚠️ Warning: Restoring a keypair will replace your current keypair. Make sure you have a backup
+                    first!
                 </div>
-                
-                <label for="restoreData">Backup Data:</label>
-                <textarea id="restoreData" placeholder="Paste your backup data here..."></textarea>
-                
-                <label for="restorePassword">Password (if you used one during backup):</label>
-                <input type="password" id="restorePassword" placeholder="Enter the password used for encryption">
-                
-                <div style="text-align: center; margin-top: 10px;">
-                    <input type="file" id="restoreFile" accept=".json,.txt" style="display: none;" onchange="loadBackupFile(event)">
-                    <button type="button" onclick="document.getElementById('restoreFile').click()" style="background: linear-gradient(135deg, #8B5CF6, #7C3AED);">
-                        📁 Load from File
+
+                <!-- Tab buttons -->
+                <div style="margin-bottom: 20px;">
+                    <button type="button" id="restoreTabBackup" class="tab-button active"
+                        onclick="switchRestoreTab('backup')">
+                        📁 From Backup File
                     </button>
+                    <button type="button" id="restoreTabManual" class="tab-button" onclick="switchRestoreTab('manual')">
+                        ✏️ Manual Input
+                    </button>
+                </div>
+
+                <!-- Backup tab content -->
+                <div id="restoreBackupTab" class="tab-content">
+                    <label for="restoreData">Backup Data:</label>
+                    <textarea id="restoreData" placeholder="Paste your backup data here..."></textarea>
+
+                    <label for="restorePassword">Password (if you used one during backup):</label>
+                    <input type="password" id="restorePassword" placeholder="Enter the password used for encryption">
+
+                    <div style="text-align: center; margin-top: 10px;">
+                        <input type="file" id="restoreFile" accept=".json,.txt" style="display: none;"
+                            onchange="loadBackupFile(event)">
+                        <button type="button" onclick="document.getElementById('restoreFile').click()"
+                            style="background: linear-gradient(135deg, #8B5CF6, #7C3AED);">
+                            📁 Load from File
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Manual tab content -->
+                <div id="restoreManualTab" class="tab-content" style="display: none;">
+                    <label for="restorePub">Public Key (pub):</label>
+                    <input type="text" id="restorePub" placeholder="Enter the public key (pub)">
+
+                    <label for="restorePriv">Private Key (priv):</label>
+                    <input type="password" id="restorePriv" placeholder="Enter the private key (priv)">
+
+                    <label for="restoreEpub">Encrypted Public Key (epub):</label>
+                    <input type="text" id="restoreEpub" placeholder="Enter the encrypted public key (epub)">
+
+                    <label for="restoreEpriv">Encrypted Private Key (epriv):</label>
+                    <input type="password" id="restoreEpriv" placeholder="Enter the encrypted private key (epriv)">
+
+                    <div
+                        style="margin-top: 15px; padding: 10px; background-color: var(--light-gray); border-radius: 8px; font-size: 0.9rem;">
+                        <strong>💡 Tip:</strong> You can find these values in your backup file or by using the "Debug
+                        Keypair" button to see the current keypair structure.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1159,13 +1431,13 @@
         // Theme toggle functionality
         const themeToggle = document.getElementById('themeToggle');
         const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-        
+
         // Set initial theme based on system preference
         if (prefersDarkScheme.matches) {
             document.body.setAttribute('data-theme', 'dark');
             themeToggle.textContent = '☀️';
         }
-        
+
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.body.getAttribute('data-theme');
             if (currentTheme === 'dark') {
@@ -1182,19 +1454,19 @@
             console.error("Error: d3 object not loaded correctly");
             window.d3 = {};
         }
-        
+
         if (!window.d3.debug) {
             console.warn("Warning: d3.debug object not found, initializing");
             window.d3.debug = {};
         }
-        
+
         // Check if testGunConnection exists, otherwise create it
         if (!window.d3.debug.testGunConnection) {
             console.warn("Warning: testGunConnection function not found, creating");
-            window.d3.debug.testGunConnection = async function() {
+            window.d3.debug.testGunConnection = async function () {
                 try {
                     const startTime = Date.now();
-                    
+
                     // Test Gun connection with a simple ping
                     const result = await new Promise((resolve) => {
                         const timeoutId = setTimeout(() => {
@@ -1203,7 +1475,7 @@
                                 message: "Connection test timeout"
                             });
                         }, 5000);
-                        
+
                         // Try to read data from Gun
                         window.gun.get("connection_test").once((data) => {
                             clearTimeout(timeoutId);
@@ -1212,10 +1484,10 @@
                             });
                         });
                     });
-                    
+
                     const endTime = Date.now();
                     const latency = endTime - startTime;
-                    
+
                     return {
                         ...result,
                         latency
@@ -1228,7 +1500,7 @@
                 }
             };
         }
-        
+
         // DOM Elements
         const connectWalletBtn = document.getElementById('connectWallet');
         const walletInfoEl = document.getElementById('walletInfo');
@@ -1248,7 +1520,181 @@
         let activeConversations = new Set();
         let processedMessages = new Set();
         let chatMessages = {};
-        
+        let conversations = new Map(); // Store conversation data
+
+        // Function to add or update a conversation
+        const addConversation = (address, lastMessage = '', messageCount = 0) => {
+            if (!address || address.toLowerCase() === userAddress?.toLowerCase()) {
+                return; // Don't add self as conversation
+            }
+
+            const normalizedAddress = address.toLowerCase();
+            const existing = conversations.get(normalizedAddress);
+
+            if (existing) {
+                existing.lastMessage = lastMessage || existing.lastMessage;
+                existing.messageCount = existing.messageCount + (messageCount || 0);
+                existing.lastActivity = Date.now();
+            } else {
+                conversations.set(normalizedAddress, {
+                    address: address,
+                    lastMessage: lastMessage,
+                    messageCount: messageCount || 0,
+                    lastActivity: Date.now()
+                });
+            }
+
+            updateConversationsList();
+        };
+
+        // Function to update the conversations list in the sidebar
+        const updateConversationsList = () => {
+            const conversationsContent = document.getElementById('conversationsContent');
+            if (!conversationsContent) return;
+
+            // Sort conversations by last activity (most recent first)
+            const sortedConversations = Array.from(conversations.values())
+                .sort((a, b) => b.lastActivity - a.lastActivity);
+
+            if (sortedConversations.length === 0) {
+                conversationsContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--secondary-color);">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">💬</div>
+                        <div>No conversations yet</div>
+                        <div style="font-size: 0.8rem; margin-top: 5px;">Start a chat by entering an address</div>
+                    </div>
+                `;
+                return;
+            }
+
+            conversationsContent.innerHTML = sortedConversations.map(conv => {
+                const shortAddress = `${conv.address.slice(0, 6)}...${conv.address.slice(-4)}`;
+                const lastMessagePreview = conv.lastMessage.length > 30
+                    ? conv.lastMessage.substring(0, 30) + '...'
+                    : conv.lastMessage;
+
+                return `
+                    <div class="conversation-item" data-address="${conv.address}" onclick="selectConversation('${conv.address}')">
+                        <div class="address">${shortAddress}</div>
+                        <div class="message-count">${conv.messageCount} message${conv.messageCount !== 1 ? 's' : ''}</div>
+                        <div class="last-message">${lastMessagePreview || 'No messages yet'}</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Function to reorder existing messages chronologically
+        const reorderMessages = () => {
+            const existingMessages = Array.from(messagesContainer.children);
+            if (existingMessages.length <= 1) return;
+
+            // Sort messages by their timestamp
+            const sortedMessages = existingMessages.sort((a, b) => {
+                const timestampA = parseInt(a.dataset.timestamp) || 0;
+                const timestampB = parseInt(b.dataset.timestamp) || 0;
+                return timestampA - timestampB;
+            });
+
+            // Clear container and re-add messages in correct order
+            messagesContainer.innerHTML = '';
+            sortedMessages.forEach(message => {
+                messagesContainer.appendChild(message);
+            });
+
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+
+        // Function to refresh current conversation
+        const refreshCurrentConversation = () => {
+            const currentRecipient = recipientAddressInput.value.trim();
+            if (currentRecipient) {
+                selectConversation(currentRecipient);
+            }
+        };
+
+        // Function to select a conversation
+        window.selectConversation = async (address) => {
+            // Update recipient address input
+            document.getElementById('recipientAddress').value = address;
+
+            // Update active conversation styling
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const selectedItem = document.querySelector(`[data-address="${address}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
+
+            // Clear messages container and load conversation history
+            messagesContainer.innerHTML = '';
+
+            // Load messages for this conversation from localStorage
+            const conversationKey = [userAddress, address].sort().join('_');
+            const savedMessages = chatMessages[conversationKey] || [];
+
+            // 🔍 NUOVO: Pulisci i messaggi duplicati prima di visualizzarli
+            const cleanedMessages = cleanDuplicateMessages(savedMessages);
+            console.log(`🔍 Caricati ${cleanedMessages.length} messaggi (${savedMessages.length - cleanedMessages.length} duplicati rimossi)`);
+
+            // ✅ NUOVO: Ordina i messaggi per timestamp prima di visualizzarli
+            const sortedMessages = cleanedMessages.sort((a, b) => {
+                const timestampA = a.date || a.timestamp || 0;
+                const timestampB = b.date || b.timestamp || 0;
+                return timestampA - timestampB;
+            });
+
+            // Visualizza i messaggi in ordine cronologico
+            sortedMessages.forEach(msg => {
+                const isFromMe = msg.from?.toLowerCase() === userAddress?.toLowerCase();
+                displayMessage(msg, isFromMe);
+            });
+
+            // 🔍 NUOVO: Verifica e registra automaticamente il keypair se necessario
+            try {
+                console.log("🔍 Verificando keypair per conversazione:", address);
+                const keypairStatus = await d3.debugKeypairStatus(address);
+
+                if (!keypairStatus.hasKeypairInDatabase && keypairStatus.isCurrentUser) {
+                    console.log("🔄 Keypair non trovato per utente corrente, registrando automaticamente...");
+                    const registrationResult = await d3.forceRegisterKeypair(address);
+                    if (registrationResult) {
+                        console.log("✅ Keypair registrato automaticamente per conversazione");
+                    } else {
+                        console.warn("⚠️ Registrazione automatica fallita per conversazione");
+                    }
+                } else if (!keypairStatus.hasKeypairInDatabase) {
+                    console.warn("⚠️ Keypair non trovato per destinatario:", address);
+                    console.log("💡 Il destinatario deve registrare il proprio keypair per ricevere messaggi crittografati");
+                }
+            } catch (error) {
+                console.error("❌ Errore durante la verifica keypair per conversazione:", error);
+            }
+
+            // Set up message reception for this specific recipient
+            handleRecipientChange();
+        };
+
+        // Function to open new conversation modal
+        window.openNewConversationModal = () => {
+            const address = prompt('Enter the Ethereum address to start a conversation with:');
+            if (address && address.trim()) {
+                const cleanAddress = address.trim();
+
+                // Validate Ethereum address format
+                if (!/^0x[a-fA-F0-9]{40}$/.test(cleanAddress)) {
+                    alert('Please enter a valid Ethereum address (0x followed by 40 hexadecimal characters)');
+                    return;
+                }
+
+                // Add conversation and select it
+                addConversation(cleanAddress, '', 0);
+                selectConversation(cleanAddress);
+            }
+        };
+
         // LocalStorage functions
         const saveMessagesToLocalStorage = () => {
             try {
@@ -1258,14 +1704,14 @@
                 console.error('Error saving messages to localStorage:', error);
             }
         };
-        
+
         const loadMessagesFromLocalStorage = () => {
             try {
                 let saved = localStorage.getItem('shogun_d3_chat_messages');
                 if (!saved) {
                     saved = localStorage.getItem('succus_chat_messages');
                 }
-                
+
                 if (saved) {
                     chatMessages = JSON.parse(saved);
                     console.log('Messages loaded from localStorage:', Object.keys(chatMessages).length, 'conversations found');
@@ -1276,16 +1722,16 @@
             }
             return false;
         };
-        
+
         // Load messages from localStorage on startup
         loadMessagesFromLocalStorage();
-        
+
         // Function to check Gun status
         const checkGunStatus = async () => {
             try {
                 const status = await window.d3.debug.testGunConnection();
                 const statusElement = document.getElementById('gunStatus');
-                
+
                 if (status.success) {
                     statusElement.innerHTML = `
                         <span class="status-indicator online"></span>
@@ -1307,74 +1753,680 @@
                 return false;
             }
         };
-        
-        // Check Gun status every 10 seconds
-        setInterval(checkGunStatus, 10000);
-        checkGunStatus();
-        
+
+        // Function to handle offline message sending
+        const handleOfflineMessageSending = (message, recipientAddress) => {
+            console.log('GunDB is offline, storing message locally for later delivery');
+
+            // Store message in localStorage for later delivery
+            const offlineMessages = JSON.parse(localStorage.getItem('shogun_offline_messages') || '[]');
+            offlineMessages.push({
+                message: message,
+                recipient: recipientAddress,
+                timestamp: Date.now(),
+                userAddress: userAddress
+            });
+            localStorage.setItem('shogun_offline_messages', JSON.stringify(offlineMessages));
+
+            // Show offline indicator
+            const statusElement = document.getElementById('gunStatus');
+            statusElement.innerHTML = `
+                <span class="status-indicator offline"></span>
+                <span>Message stored offline (${offlineMessages.length} pending)</span>
+            `;
+        };
+
+        // Function to retry sending offline messages
+        const retryOfflineMessages = async () => {
+            const offlineMessages = JSON.parse(localStorage.getItem('shogun_offline_messages') || '[]');
+            if (offlineMessages.length === 0) return;
+
+            console.log(`Attempting to send ${offlineMessages.length} offline messages`);
+
+            const successfulMessages = [];
+            const failedMessages = [];
+
+            for (const offlineMsg of offlineMessages) {
+                try {
+                    const result = await d3.sendmessage(offlineMsg.message, [offlineMsg.recipient], gunKeyPair);
+                    if (result.sent) {
+                        successfulMessages.push(offlineMsg);
+                    } else {
+                        failedMessages.push(offlineMsg);
+                    }
+                } catch (error) {
+                    failedMessages.push(offlineMsg);
+                }
+            }
+
+            // Update localStorage with only failed messages
+            localStorage.setItem('shogun_offline_messages', JSON.stringify(failedMessages));
+
+            if (successfulMessages.length > 0) {
+                console.log(`Successfully sent ${successfulMessages.length} offline messages`);
+            }
+
+            if (failedMessages.length > 0) {
+                console.log(`${failedMessages.length} messages still pending delivery`);
+            }
+        };
+
+        // Function to clear all messages from Gun and localStorage
+        const clearAllMessages = async () => {
+            if (!userAddress) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            // Chiedi conferma all'utente
+            const confirmed = confirm(
+                "⚠️ ATTENTION: This will permanently delete ALL messages from Gun network and localStorage.\n\n" +
+                "This action cannot be undone. Are you sure you want to continue?"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                console.log("🗑️ Starting to clear all messages...");
+
+                // 1. Cancella tutti i messaggi da Gun
+                const conversationsToClear = Array.from(conversations.keys());
+                let gunClearedCount = 0;
+
+                for (const address of conversationsToClear) {
+                    try {
+                        // Genera il namespace della conversazione
+                        const normalizedUser = userAddress.toLowerCase();
+                        const normalizedRecipient = address.toLowerCase();
+                        const participants = [normalizedRecipient, normalizedUser].sort();
+                        const sortedParticipants = participants.join("");
+                        const chatNamespace = window.d3.HashNamespace(sortedParticipants);
+
+                        // Cancella tutti i messaggi in questo namespace
+                        const chatRef = window.gun.get("shogun").get(chatNamespace);
+
+                        // Mappa tutti i messaggi e li cancella
+                        chatRef.map().once((data, key) => {
+                            if (key !== "_" && data) {
+                                chatRef.get(key).put(null);
+                                gunClearedCount++;
+                            }
+                        });
+
+                        console.log(`🗑️ Cleared messages for conversation with ${address}`);
+                    } catch (error) {
+                        console.error(`❌ Error clearing messages for ${address}:`, error);
+                    }
+                }
+
+                // 2. Cancella tutti i messaggi da localStorage
+                const localStorageKeys = [
+                    'shogun_d3_chat_messages',
+                    'succus_chat_messages',
+                    'shogun_offline_messages'
+                ];
+
+                let localStorageClearedCount = 0;
+                localStorageKeys.forEach(key => {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        try {
+                            const parsedData = JSON.parse(data);
+                            if (typeof parsedData === 'object') {
+                                localStorageClearedCount += Object.keys(parsedData).length;
+                            }
+                        } catch (e) {
+                            // Se non è JSON, conta come 1 elemento
+                            localStorageClearedCount++;
+                        }
+                        localStorage.removeItem(key);
+                    }
+                });
+
+                // 3. Pulisci le variabili locali
+                chatMessages = {};
+                conversations.clear();
+                messagesContainer.innerHTML = '';
+                updateConversationsList();
+
+                // 4. Mostra il risultato
+                const message = `✅ Messages cleared successfully!\n\n` +
+                    `🗑️ Gun Network: ${gunClearedCount} messages cleared\n` +
+                    `💾 LocalStorage: ${localStorageClearedCount} items cleared\n\n` +
+                    `All conversations and messages have been permanently deleted.`;
+
+                alert(message);
+                console.log("🗑️ All messages cleared successfully");
+
+            } catch (error) {
+                console.error("❌ Error clearing messages:", error);
+                alert("❌ Error clearing messages: " + error.message);
+            }
+        };
+
+        // Function to disconnect wallet
+        const disconnectWallet = () => {
+            // Reset all variables
+            userAddress = null;
+            gunKeyPair = null;
+            window.currentUserAddress = null;
+            window.gunKeyPair = null;
+
+            // Remove connected class
+            const walletSection = document.getElementById('wallet-section');
+            walletSection.classList.remove('connected');
+
+            // ✅ AGGIORNATO: Mostra pulsante connessione e nascondi disconnessione
+            document.getElementById('connectWallet').style.display = 'inline-block';
+            document.getElementById('disconnectWallet').style.display = 'none';
+
+            // Reset wallet info
+            walletInfoEl.innerHTML = '';
+            keyPairStatusElement.innerHTML = '';
+
+            // Hide chat section
+            chatSection.style.display = 'none';
+
+            // Clear conversations
+            conversations.clear();
+            updateConversationsList();
+
+            // Clear messages
+            messagesContainer.innerHTML = '';
+
+            console.log('Wallet disconnected');
+        };
+
         // Function to connect wallet
         const connectWallet = async () => {
             try {
                 const result = await d3.connectWithMetaMask();
-                
+
                 if (!result || !result.address) {
                     console.error("Connection error: invalid result", result);
                     return;
                 }
-                
+
                 userAddress = result.address;
                 gunKeyPair = result.keypair;
-                
+
                 window.currentUserAddress = userAddress;
                 window.gunKeyPair = gunKeyPair;
-                
+
                 // Add connected class to hide buttons and show status
                 const walletSection = document.getElementById('wallet-section');
                 walletSection.classList.add('connected');
-                
+
+                // ✅ AGGIORNATO: Mostra pulsante disconnessione e nascondi connessione
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('disconnectWallet').style.display = 'inline-block';
+
                 walletInfoEl.innerHTML = `
                     <div style="font-weight: 600;">✓ Wallet connected</div>
                     <div style="font-size: 0.8rem; margin-top: 2px;">${userAddress.slice(0, 6)}...${userAddress.slice(-4)}</div>
                 `;
-                
+
                 keyPairStatusElement.innerHTML = `<span class="active">✓ Keypair active</span>`;
-                
-                // Show backup button when connected
-                document.getElementById('backupKeypair').style.display = 'inline-block';
-                
+
+                // ✅ AGGIORNATO: I pulsanti di debug rimangono sempre visibili
+                // Non è più necessario mostrare/nascondere i pulsanti di debug
+
                 chatSection.style.display = 'block';
+
+                // Load existing conversations from localStorage
+                loadExistingConversations();
+
+                // Set up message reception for all conversations
+                setupMessageReception();
             } catch (error) {
                 console.error("Error connecting to wallet:", error);
                 alert("Error connecting to wallet. Check console for details.");
             }
         };
-        
+
+        // Function to load existing conversations from localStorage
+        const loadExistingConversations = () => {
+            // Load messages from localStorage
+            loadMessagesFromLocalStorage();
+
+            // Extract conversations from loaded messages
+            Object.keys(chatMessages).forEach(conversationKey => {
+                const messages = chatMessages[conversationKey];
+                if (messages && messages.length > 0) {
+                    // Extract the other address from conversation key
+                    const addresses = conversationKey.split('_');
+                    const otherAddress = addresses.find(addr =>
+                        addr.toLowerCase() !== userAddress?.toLowerCase()
+                    );
+
+                    if (otherAddress) {
+                        const lastMessage = messages[messages.length - 1];
+                        const lastMessageContent = lastMessage.text || lastMessage.encryptedMSG || lastMessage.message || lastMessage.content || '';
+
+                        addConversation(otherAddress, lastMessageContent, messages.length);
+                    }
+                }
+            });
+        };
+
+        // Function to clean up duplicate messages
+        const cleanDuplicateMessages = (messages) => {
+            const seen = new Map();
+            const cleaned = [];
+
+            for (const message of messages) {
+                const messageId = message.msg_id || `${message.from}_${message.date}_${message.text || message.encryptedMSG || message.message || message.content}`;
+
+                if (!seen.has(messageId)) {
+                    seen.set(messageId, true);
+                    cleaned.push(message);
+                } else {
+                    console.log(`🔍 Rimuovendo messaggio duplicato: ${messageId}`);
+                }
+            }
+
+            return cleaned;
+        };
+
+        // Function to display a message in the chat
+        const displayMessage = (message, isFromMe = false) => {
+            // ✅ NUOVO: Controllo per evitare che messaggi inviati vengano visualizzati come ricevuti
+            if (!isFromMe && message.from && message.from.toLowerCase() === userAddress?.toLowerCase()) {
+                console.log(`🔍 Ignorando messaggio ricevuto che è stato inviato da me: ${message.text || message.encryptedMSG || message.message || message.content}`);
+                return;
+            }
+
+            // 🔍 MIGLIORATO: Controllo di deduplicazione più robusto
+            const messageId = message.msg_id || `${message.from}_${message.date}_${message.text || message.encryptedMSG || message.message || message.content}`;
+
+            // Inizializza la mappa dei messaggi visualizzati se non esiste
+            if (!window.displayedMessages) {
+                window.displayedMessages = new Map();
+            }
+
+            // 🔍 NUOVO: Controllo più aggressivo per messaggi duplicati
+            // Se il messaggio ha lo stesso contenuto e mittente di un messaggio recente (ultimi 3 secondi), è un duplicato
+            const timeWindow = 3000; // 3 secondi
+            const now = Date.now();
+            const msgContent = message.text || message.encryptedMSG || message.message || message.content;
+            const messageFrom = message.from && message.from.toLowerCase();
+
+            // Controlla tutti i messaggi visualizzati recentemente per duplicati
+            for (const [key, timestamp] of window.displayedMessages.entries()) {
+                if (now - timestamp < timeWindow) {
+                    // Se la chiave contiene lo stesso contenuto e mittente, è un duplicato
+                    if (key.includes(msgContent) && key.includes(messageFrom)) {
+                        console.log(`🔍 DUPLICATO FRONTEND: ${msgContent} da ${messageFrom} (già visualizzato ${Math.round((now - timestamp) / 1000)}s fa)`);
+                        return; // Ignora il messaggio duplicato
+                    }
+                }
+            }
+
+            // Controlla se il messaggio è già stato visualizzato
+            if (window.displayedMessages.has(messageId)) {
+                console.log(`🔍 Messaggio già visualizzato, ignorato: ${messageId}`);
+                return;
+            }
+
+            // Marca il messaggio come visualizzato
+            window.displayedMessages.set(messageId, Date.now());
+
+            // Pulisci i messaggi vecchi (più di 5 minuti)
+            setTimeout(() => {
+                if (window.displayedMessages) {
+                    window.displayedMessages.delete(messageId);
+                }
+            }, 5 * 60 * 1000);
+
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${isFromMe ? 'sent' : 'received'}`;
+
+            const timestamp = new Date(message.date || Date.now()).toLocaleTimeString();
+            const sender = isFromMe ? 'You' : (message.from ? `${message.from.slice(0, 6)}...${message.from.slice(-4)}` : 'Unknown');
+
+            // Get message content with better fallback handling
+            let messageContent = '';
+            if (message.text && message.text.trim()) {
+                messageContent = message.text;
+            } else if (message.encryptedMSG && message.encryptedMSG.trim()) {
+                messageContent = message.encryptedMSG;
+            } else if (message.message && message.message.trim()) {
+                messageContent = message.message;
+            } else if (message.content && message.content.trim()) {
+                messageContent = message.content;
+            } else {
+                messageContent = 'Message content unavailable';
+                // Debug information when content is unavailable
+                if (window.d3?.debug?.logLevel === 'debug' || window.d3?.debug?.logLevel === 'verbose') {
+                    console.warn('Message content unavailable. Message object:', {
+                        hasText: !!message.text,
+                        hasEncryptedMSG: !!message.encryptedMSG,
+                        hasMessage: !!message.message,
+                        hasContent: !!message.content,
+                        messageKeys: Object.keys(message)
+                    });
+                }
+            }
+
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span class="sender">${sender}</span>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="message-content">
+                    ${messageContent}
+                </div>
+            `;
+
+            // ✅ NUOVO: Inserisci il messaggio in ordine cronologico
+            const messageTimestamp = message.date || Date.now();
+            const existingMessages = Array.from(messagesContainer.children);
+
+            // Trova la posizione corretta per inserire il messaggio
+            let insertIndex = existingMessages.length;
+            for (let i = 0; i < existingMessages.length; i++) {
+                const existingMessage = existingMessages[i];
+                const existingTimestamp = existingMessage.dataset.timestamp || 0;
+
+                if (messageTimestamp < existingTimestamp) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            // Inserisci il messaggio nella posizione corretta
+            if (insertIndex === existingMessages.length) {
+                // Aggiungi alla fine se è il messaggio più recente
+                messagesContainer.appendChild(messageElement);
+            } else {
+                // Inserisci prima del messaggio esistente
+                const referenceNode = existingMessages[insertIndex];
+                messagesContainer.insertBefore(messageElement, referenceNode);
+            }
+
+            // Aggiungi il timestamp come attributo data per facilitare l'ordinamento
+            messageElement.dataset.timestamp = messageTimestamp;
+
+            // Scroll to bottom only if the new message is the most recent
+            if (insertIndex === existingMessages.length) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            // ✅ NUOVO: Controllo automatico per riordinare se necessario
+            // Se il messaggio è stato inserito in una posizione diversa dalla fine, 
+            // potrebbe essere necessario riordinare tutti i messaggi
+            if (insertIndex !== existingMessages.length && existingMessages.length > 10) {
+                // Riordina solo se ci sono molti messaggi per evitare performance issues
+                setTimeout(() => {
+                    reorderMessages();
+                }, 100);
+            }
+
+            // Add conversation to sidebar
+            const otherAddress = isFromMe ? message.to : message.from;
+            if (otherAddress && otherAddress !== userAddress) {
+                addConversation(otherAddress, messageContent, 1);
+            }
+
+            // Save message to localStorage
+            saveMessageToLocalStorage(message, isFromMe);
+        };
+
+        // Function to save message to localStorage
+        const saveMessageToLocalStorage = (message, isFromMe) => {
+            const otherAddress = isFromMe ? message.to : message.from;
+            if (!otherAddress || otherAddress === userAddress) return;
+
+            const conversationKey = [userAddress, otherAddress].sort().join('_');
+
+            if (!chatMessages[conversationKey]) {
+                chatMessages[conversationKey] = [];
+            }
+
+            // Add message to conversation history
+            chatMessages[conversationKey].push({
+                ...message,
+                timestamp: message.date || Date.now()
+            });
+
+            // Keep only last 100 messages per conversation
+            if (chatMessages[conversationKey].length > 100) {
+                chatMessages[conversationKey] = chatMessages[conversationKey].slice(-100);
+            }
+
+            saveMessagesToLocalStorage();
+        };
+
+        // Function to set up message reception
+        const setupMessageReception = async () => {
+            if (!userAddress || !gunKeyPair) {
+                console.error('Cannot setup message reception: missing user address or keypair');
+                return;
+            }
+
+            try {
+                // Set up a general message listener that will handle messages for any recipient
+                const cleanup = await d3.receiveMessage(userAddress, (messageData) => {
+                    console.log('Received message data:', messageData);
+
+                    // ✅ CORRETTO: Verifica che il messaggio non sia inviato da noi
+                    if (messageData.isSentByMe) {
+                        console.log('Ignoring message sent by me in general listener');
+                        return;
+                    }
+
+                    // Format the message data for display
+                    const formattedMessage = {
+                        text: messageData.decrypted || 'Message content unavailable',
+                        from: messageData.sender || messageData.originalData?.from || 'Unknown',
+                        to: userAddress,
+                        date: messageData.timestamp || messageData.originalData?.date || Date.now()
+                    };
+
+                    // Check if the message is for the current recipient
+                    const currentRecipient = recipientAddressInput.value.trim();
+                    if (currentRecipient && formattedMessage.from && formattedMessage.from.toLowerCase() === currentRecipient.toLowerCase()) {
+                        displayMessage(formattedMessage, false);
+                    }
+                });
+
+                console.log('Message reception setup completed');
+            } catch (error) {
+                console.error('Error setting up message reception:', error);
+            }
+        };
+
+        // Function to handle recipient address changes
+        const handleRecipientChange = async () => {
+            const recipientAddress = recipientAddressInput.value.trim();
+            if (recipientAddress && userAddress && gunKeyPair) {
+                try {
+                    // Set up specific listener for this recipient
+                    const cleanup = await d3.receiveMessage(recipientAddress, (messageData) => {
+                        console.log('Received message for current recipient:', messageData);
+
+                        // ✅ CORRETTO: Verifica che il messaggio non sia inviato da noi
+                        if (messageData.isSentByMe) {
+                            console.log('Ignoring message sent by me in recipient-specific listener');
+                            return;
+                        }
+
+                        // Format the message data for display
+                        const formattedMessage = {
+                            text: messageData.decrypted || 'Message content unavailable',
+                            from: messageData.sender || messageData.originalData?.from || 'Unknown',
+                            to: userAddress,
+                            date: messageData.timestamp || messageData.originalData?.date || Date.now()
+                        };
+
+                        displayMessage(formattedMessage, false);
+                    });
+
+                    console.log(`Message reception setup for recipient: ${recipientAddress}`);
+                } catch (error) {
+                    console.error('Error setting up recipient-specific message reception:', error);
+                }
+            }
+        };
+
         // Event listeners
         connectWalletBtn.addEventListener('click', connectWallet);
+
+        // Disconnect wallet button
+        document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+
+        // Refresh conversation button
+        document.getElementById('refreshConversation').addEventListener('click', () => {
+            refreshCurrentConversation();
+        });
+
+        // Register keypair button
+        document.getElementById('registerKeypair').addEventListener('click', async () => {
+            try {
+                if (!userAddress || !gunKeyPair) {
+                    alert("Please connect your wallet first.");
+                    return;
+                }
+
+                const result = await d3.ensureKeypairRegistered();
+                if (result) {
+                    alert("Keypair registered successfully!");
+                } else {
+                    alert("Failed to register keypair. Check console for details.");
+                }
+            } catch (error) {
+                console.error("Error registering keypair:", error);
+                alert("Error registering keypair: " + error.message);
+            }
+        });
+
+        // Debug Keypair button
+        document.getElementById('debugKeypair').addEventListener('click', async () => {
+            if (!userAddress) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            try {
+                console.log("🔍 Avviando debug keypair per:", userAddress);
+                const status = await d3.debugKeypairStatus(userAddress);
+
+                let message = `🔍 DEBUG KEYPAIR STATUS\n\n`;
+                message += `Address: ${status.address}\n`;
+                message += `Is Current User: ${status.isCurrentUser}\n`;
+                message += `Keypair in Memory: ${status.hasKeypairInMemory}\n`;
+                message += `Keypair in Database: ${status.hasKeypairInDatabase}\n`;
+                message += `Retrieved from DB: ${status.retrievedKeypair}\n\n`;
+
+                if (status.memoryKeypair) {
+                    message += `Memory Keypair:\n`;
+                    message += `- Has Pub: ${status.memoryKeypair.hasPub}\n`;
+                    message += `- Has Epub: ${status.memoryKeypair.hasEpub}\n\n`;
+                }
+
+                if (status.databaseKeypair) {
+                    message += `Database Keypair:\n`;
+                    message += `- Has Pub: ${status.databaseKeypair.hasPub}\n`;
+                    message += `- Has Epub: ${status.databaseKeypair.hasEpub}\n`;
+                }
+
+                if (status.error) {
+                    message += `\n❌ ERROR: ${status.error}`;
+                }
+
+                console.log("🔍 Debug result:", status);
+                alert(message);
+            } catch (error) {
+                console.error("Error debugging keypair:", error);
+                alert("Error debugging keypair: " + error.message);
+            }
+        });
+
+        // Clear All Messages button
+        document.getElementById('clearAllMessages').addEventListener('click', clearAllMessages);
+
         sendMessageBtn.addEventListener('click', async () => {
             const message = messageInput.value.trim();
             const recipientAddress = recipientAddressInput.value.trim();
-            
+
             if (!message || !recipientAddress) {
                 alert("Please enter both a message and a recipient address.");
                 return;
             }
-            
+
             try {
+                // Generate a unique message ID for deduplication
+                const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+                // 🔍 NUOVO: Marca questo messaggio come "inviato localmente" per evitare duplicazioni
+                if (!window.sentMessages) {
+                    window.sentMessages = new Map();
+                }
+                window.sentMessages.set(messageId, {
+                    content: message,
+                    timestamp: Date.now(),
+                    recipient: recipientAddress
+                });
+
+                // Display the sent message immediately for better UX
+                const sentMessage = {
+                    text: message,
+                    from: userAddress,
+                    to: recipientAddress,
+                    date: Date.now(),
+                    msg_id: messageId, // Add unique ID for deduplication
+                    sent_locally: true // Flag to identify locally sent messages
+                };
+                displayMessage(sentMessage, true);
+
+                // Add conversation to sidebar immediately
+                addConversation(recipientAddress, message, 1);
+
+                // Clear input immediately
+                messageInput.value = '';
+
+                // Try to send the message
                 const result = await d3.sendmessage(message, [recipientAddress], gunKeyPair);
-                
+
                 if (result.sent) {
-                    messageInput.value = '';
-                    // Message will be displayed by the receive listener
+                    console.log('Message sent successfully:', result);
+
+                    // Show warning if fallback mode was used
+                    if (result.fallback) {
+                        console.warn('Message sent in fallback mode:', result.warning);
+                        // You can show a toast notification here if you want
+                    }
+
+                    // Message is already displayed above
                 } else {
-                    alert("Error sending message: " + (result.why ? result.why.message || result.why : "Unknown error"));
+                    console.error('Failed to send message:', result.why);
+
+                    // Check if it's a network connectivity issue
+                    if (result.why && result.why.message && result.why.message.includes('network') ||
+                        result.why && result.why.message && result.why.message.includes('connection')) {
+                        // Store message offline for later delivery
+                        handleOfflineMessageSending(message, recipientAddress);
+                        alert("Network connection issue. Message stored offline for later delivery.");
+                    } else {
+                        alert("Error sending message: " + (result.why ? result.why.message || result.why : "Unknown error"));
+                    }
                 }
             } catch (error) {
                 console.error("Error sending message:", error);
-                alert("Error sending message: " + error.message);
+
+                // Check if it's a network connectivity issue
+                if (error.message && (error.message.includes('network') || error.message.includes('connection'))) {
+                    // Store message offline for later delivery
+                    handleOfflineMessageSending(message, recipientAddress);
+                    alert("Network connection issue. Message stored offline for later delivery.");
+                } else {
+                    alert("Error sending message: " + error.message);
+                }
             }
         });
-        
+
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessageBtn.click();
@@ -1382,11 +2434,11 @@
         });
 
         // Log level event listener
-        document.getElementById('logLevel').addEventListener('change', function(e) {
+        document.getElementById('logLevel').addEventListener('change', function (e) {
             const selectedLevel = e.target.value;
             if (window.d3 && window.d3.debug) {
-                window.d3.debug.logLevel = selectedLevel;
-                console.log(`Livello di log cambiato a: ${selectedLevel}`);
+                window.d3.debug.setLogLevel(selectedLevel);
+                console.log(`[SHOGUN-D3] Log level changed to: ${selectedLevel}`);
             }
         });
 
@@ -1394,9 +2446,213 @@
         if (window.d3 && window.d3.debug) {
             const logLevelSelect = document.getElementById('logLevel');
             if (logLevelSelect) {
-                window.d3.debug.logLevel = logLevelSelect.value;
+                const defaultLevel = logLevelSelect.value;
+                window.d3.debug.setLogLevel(defaultLevel);
+                console.log(`[SHOGUN-D3] Initial log level set to: ${defaultLevel}`);
             }
         }
+
+        // Event listener for recipient address changes
+        recipientAddressInput.addEventListener('change', handleRecipientChange);
+        recipientAddressInput.addEventListener('blur', handleRecipientChange);
+
+        // Check Gun status every 10 seconds
+        setInterval(checkGunStatus, 10000);
+        checkGunStatus();
+
+        // Check for offline messages to retry every 30 seconds
+        setInterval(async () => {
+            const isConnected = await checkGunStatus();
+            if (isConnected && gunKeyPair) {
+                await retryOfflineMessages();
+            }
+        }, 30000);
+
+        // Function to switch restore modal tabs
+        const switchRestoreTab = (tabName) => {
+            // Update tab buttons
+            document.getElementById('restoreTabBackup').classList.remove('active');
+            document.getElementById('restoreTabManual').classList.remove('active');
+            document.getElementById(`restoreTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+
+            // Update tab content
+            document.getElementById('restoreBackupTab').classList.toggle('hidden', tabName !== 'backup');
+            document.getElementById('restoreManualTab').classList.toggle('hidden', tabName !== 'manual');
+        };
+
+        // Function to open backup modal
+        const openBackupModal = () => {
+            document.getElementById('backupModal').style.display = 'block';
+        };
+
+        // Function to close backup modal
+        const closeBackupModal = () => {
+            document.getElementById('backupModal').style.display = 'none';
+            document.getElementById('backupData').value = '';
+            document.getElementById('backupPassword').value = '';
+        };
+
+        // Function to open restore modal
+        const openRestoreModal = () => {
+            document.getElementById('restoreModal').style.display = 'block';
+            // Reset to backup tab by default
+            switchRestoreTab('backup');
+        };
+
+        // Function to close restore modal
+        const closeRestoreModal = () => {
+            document.getElementById('restoreModal').style.display = 'none';
+            document.getElementById('restoreData').value = '';
+            document.getElementById('restorePassword').value = '';
+            document.getElementById('restorePub').value = '';
+            document.getElementById('restorePriv').value = '';
+            document.getElementById('restoreEpub').value = '';
+            document.getElementById('restoreEpriv').value = '';
+        };
+
+        // Function to generate backup
+        const generateBackup = async () => {
+            if (!userAddress || !gunKeyPair) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            try {
+                const password = document.getElementById('backupPassword').value;
+                const backupData = await d3.backupKeypair(password);
+
+                if (backupData) {
+                    document.getElementById('backupData').value = JSON.stringify(backupData, null, 2);
+                } else {
+                    alert("Failed to generate backup. Check console for details.");
+                }
+            } catch (error) {
+                console.error("Error generating backup:", error);
+                alert("Error generating backup: " + error.message);
+            }
+        };
+
+        // Function to download backup
+        const downloadBackup = () => {
+            const backupData = document.getElementById('backupData').value;
+            if (!backupData.trim()) {
+                alert("Please generate a backup first.");
+                return;
+            }
+
+            const blob = new Blob([backupData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `shogun-keypair-backup-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        // Function to copy backup to clipboard
+        const copyBackupToClipboard = () => {
+            const backupData = document.getElementById('backupData').value;
+            if (!backupData.trim()) {
+                alert("Please generate a backup first.");
+                return;
+            }
+
+            navigator.clipboard.writeText(backupData).then(() => {
+                alert("Backup data copied to clipboard!");
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert("Failed to copy to clipboard. Please copy manually.");
+            });
+        };
+
+        // Function to load backup file
+        const loadBackupFile = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('restoreData').value = e.target.result;
+            };
+            reader.readAsText(file);
+        };
+
+        // Function to perform restore
+        const performRestore = async () => {
+            try {
+                // Check which tab is active
+                const activeTab = document.querySelector('.tab-button.active').id;
+
+                let keypairData = null;
+
+                if (activeTab === 'restoreTabBackup') {
+                    // Restore from backup data
+                    const backupData = document.getElementById('restoreData').value.trim();
+                    const password = document.getElementById('restorePassword').value;
+
+                    if (!backupData) {
+                        alert("Please enter backup data.");
+                        return;
+                    }
+
+                    try {
+                        const parsedData = JSON.parse(backupData);
+                        keypairData = await d3.restoreKeypair(parsedData, password);
+                    } catch (error) {
+                        alert("Invalid backup data format: " + error.message);
+                        return;
+                    }
+                } else if (activeTab === 'restoreTabManual') {
+                    // Restore from manual input
+                    const pub = document.getElementById('restorePub').value.trim();
+                    const priv = document.getElementById('restorePriv').value.trim();
+                    const epub = document.getElementById('restoreEpub').value.trim();
+                    const epriv = document.getElementById('restoreEpriv').value.trim();
+
+                    if (!pub || !priv || !epub || !epriv) {
+                        alert("Please fill in all keypair fields.");
+                        return;
+                    }
+
+                    // Create keypair object from manual input
+                    keypairData = {
+                        pub: pub,
+                        priv: priv,
+                        epub: epub,
+                        epriv: epriv
+                    };
+
+                    // Try to restore using the manual keypair
+                    try {
+                        const result = await d3.restoreKeypair(keypairData);
+                        if (result) {
+                            alert("Keypair restored successfully from manual input!");
+                            closeRestoreModal();
+                            return;
+                        } else {
+                            alert("Failed to restore keypair from manual input. Check console for details.");
+                            return;
+                        }
+                    } catch (error) {
+                        alert("Error restoring keypair from manual input: " + error.message);
+                        return;
+                    }
+                }
+
+                if (keypairData) {
+                    alert("Keypair restored successfully!");
+                    closeRestoreModal();
+                } else {
+                    alert("Failed to restore keypair. Check console for details.");
+                }
+            } catch (error) {
+                console.error("Error performing restore:", error);
+                alert("Error performing restore: " + error.message);
+            }
+        };
     </script>
 </body>
+
 </html>
