@@ -499,6 +499,37 @@ window.d3 = {
     return backup;
   },
 
+  // ✅ NUOVO: Funzione per esportare il keypair corrente
+  exportKeypair: async function (password) {
+    if (!window.gunKeyPair) {
+      throw new Error("No keypair available to export");
+    }
+
+    const exportData = {
+      version: "1.0",
+      timestamp: Date.now(),
+      address: window.currentUserAddress,
+      keypair: {
+        pub: window.gunKeyPair.pub,
+        priv: window.gunKeyPair.priv,
+        epub: window.gunKeyPair.epub,
+        epriv: window.gunKeyPair.epriv,
+      },
+    };
+
+    if (password) {
+      // Encrypt the keypair with the provided password
+      const encrypted = await Gun.SEA.encrypt(
+        JSON.stringify(exportData.keypair),
+        password
+      );
+      exportData.keypair = { encrypted: encrypted };
+      exportData.encrypted = true;
+    }
+
+    return exportData;
+  },
+
   // ✅ AGGIORNATO: ripristina keypair
   restoreKeypair: async function (backupData, password) {
     // Prova prima con ShogunCore se disponibile
@@ -528,9 +559,30 @@ window.d3 = {
 
     // Fallback: ripristino manuale
     try {
-      let keypairData = backupData.keypair;
+      let keypairData;
+      let isEncrypted = false;
 
-      if (backupData.encrypted && keypairData.encrypted) {
+      // ✅ NUOVO: Gestisci sia il formato backup che il formato keypair diretto
+      if (backupData.keypair) {
+        // Formato backup: { version, timestamp, address, keypair: { pub, priv, epub, epriv } }
+        keypairData = backupData.keypair;
+        isEncrypted = backupData.encrypted;
+      } else if (
+        backupData.pub &&
+        backupData.priv &&
+        backupData.epub &&
+        backupData.epriv
+      ) {
+        // Formato keypair diretto: { pub, priv, epub, epriv }
+        keypairData = backupData;
+        isEncrypted = false;
+      } else {
+        throw new Error(
+          "Invalid backup data format. Expected backup object or direct keypair object."
+        );
+      }
+
+      if (isEncrypted && keypairData.encrypted) {
         if (!password) {
           throw new Error(
             "This backup is encrypted. Please provide the password."
@@ -567,7 +619,7 @@ window.d3 = {
 
       // Register the public part
       if (window.currentUserAddress) {
-        this.registerKeypair(window.currentUserAddress, {
+        await this.registerKeypair(window.currentUserAddress, {
           pub: keypairData.pub,
           epub: keypairData.epub,
         });

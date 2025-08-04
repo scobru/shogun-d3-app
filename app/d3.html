@@ -1405,10 +1405,18 @@
                     <label for="restoreEpriv">Encrypted Private Key (epriv):</label>
                     <input type="password" id="restoreEpriv" placeholder="Enter the encrypted private key (epriv)">
 
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button type="button" onclick="populateFromCurrentKeypair()"
+                            style="background: linear-gradient(135deg, #10B981, #059669); margin-right: 10px;">
+                            🔍 Load Current Keypair Values
+                        </button>
+                    </div>
+
                     <div
                         style="margin-top: 15px; padding: 10px; background-color: var(--light-gray); border-radius: 8px; font-size: 0.9rem;">
                         <strong>💡 Tip:</strong> You can find these values in your backup file or by using the "Debug
-                        Keypair" button to see the current keypair structure.
+                        Keypair" button to see the current keypair structure. Click "Load Current Keypair Values" to
+                        populate fields with your current keypair for easy copying.
                     </div>
                 </div>
             </div>
@@ -1922,6 +1930,9 @@
             document.getElementById('connectWallet').style.display = 'inline-block';
             document.getElementById('disconnectWallet').style.display = 'none';
 
+            // ✅ NUOVO: Nascondi il pulsante backup quando disconnesso
+            document.getElementById('backupKeypair').style.display = 'none';
+
             // Reset wallet info
             walletInfoEl.innerHTML = '';
             keyPairStatusElement.innerHTML = '';
@@ -1962,6 +1973,9 @@
                 // ✅ AGGIORNATO: Mostra pulsante disconnessione e nascondi connessione
                 document.getElementById('connectWallet').style.display = 'none';
                 document.getElementById('disconnectWallet').style.display = 'inline-block';
+
+                // ✅ NUOVO: Mostra il pulsante backup quando connesso
+                document.getElementById('backupKeypair').style.display = 'inline-block';
 
                 walletInfoEl.innerHTML = `
                     <div style="font-weight: 600;">✓ Wallet connected</div>
@@ -2302,6 +2316,16 @@
             }
         });
 
+        // ✅ NUOVO: Backup Keypair button
+        document.getElementById('backupKeypair').addEventListener('click', () => {
+            openBackupModal();
+        });
+
+        // ✅ NUOVO: Restore Keypair button
+        document.getElementById('restoreKeypair').addEventListener('click', () => {
+            openRestoreModal();
+        });
+
         // Debug Keypair button
         document.getElementById('debugKeypair').addEventListener('click', async () => {
             if (!userAddress) {
@@ -2475,9 +2499,17 @@
             document.getElementById('restoreTabManual').classList.remove('active');
             document.getElementById(`restoreTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
 
-            // Update tab content
-            document.getElementById('restoreBackupTab').classList.toggle('hidden', tabName !== 'backup');
-            document.getElementById('restoreManualTab').classList.toggle('hidden', tabName !== 'manual');
+            // Update tab content - use style.display instead of CSS classes
+            const backupTab = document.getElementById('restoreBackupTab');
+            const manualTab = document.getElementById('restoreManualTab');
+
+            if (tabName === 'backup') {
+                backupTab.style.display = 'block';
+                manualTab.style.display = 'none';
+            } else if (tabName === 'manual') {
+                backupTab.style.display = 'none';
+                manualTab.style.display = 'block';
+            }
         };
 
         // Function to open backup modal
@@ -2579,6 +2611,26 @@
             reader.readAsText(file);
         };
 
+        // Function to clean and validate backup data
+        const cleanBackupData = (data) => {
+            // Remove any extra whitespace and newlines
+            let cleaned = data.trim();
+
+            // Remove any BOM characters
+            cleaned = cleaned.replace(/^\uFEFF/, '');
+
+            // If the data starts and ends with quotes, it might be a JSON string
+            if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+                try {
+                    cleaned = JSON.parse(cleaned);
+                } catch (e) {
+                    // If it fails, keep the original
+                }
+            }
+
+            return cleaned;
+        };
+
         // Function to perform restore
         const performRestore = async () => {
             try {
@@ -2598,8 +2650,63 @@
                     }
 
                     try {
-                        const parsedData = JSON.parse(backupData);
-                        keypairData = await d3.restoreKeypair(parsedData, password);
+                        // ✅ NUOVO: Pulisci i dati prima del parsing
+                        const cleanedData = cleanBackupData(backupData);
+                        console.log("🔍 Original backup data:", backupData);
+                        console.log("🔍 Cleaned backup data:", cleanedData);
+
+                        let parsedData;
+
+                        // ✅ NUOVO: Gestisci JSON doppio-encoded (stringhe con virgolette escaped)
+                        try {
+                            // Prima prova a parsare direttamente
+                            parsedData = JSON.parse(cleanedData);
+                            console.log("🔍 Parsed data (direct):", parsedData);
+                        } catch (firstError) {
+                            console.log("🔍 First parse failed:", firstError.message);
+                            // Se fallisce, prova a parsare come stringa JSON
+                            try {
+                                parsedData = JSON.parse(JSON.parse(cleanedData));
+                                console.log("🔍 Parsed data (double):", parsedData);
+                            } catch (secondError) {
+                                console.log("🔍 Second parse failed:", secondError.message);
+                                throw new Error("Invalid JSON format. Please check your backup data.");
+                            }
+                        }
+
+                        // ✅ NUOVO: Gestisci sia il formato backup che il formato keypair diretto
+                        let dataToRestore = parsedData;
+
+                        console.log("🔍 Checking data structure:", {
+                            hasKeypair: !!parsedData.keypair,
+                            hasPub: !!parsedData.pub,
+                            hasPriv: !!parsedData.priv,
+                            hasEpub: !!parsedData.epub,
+                            hasEpriv: !!parsedData.epriv
+                        });
+
+                        // Se è un keypair diretto, crea un oggetto backup wrapper
+                        if (parsedData.pub && parsedData.priv && parsedData.epub && parsedData.epriv && !parsedData.keypair) {
+                            console.log("🔍 Creating backup wrapper for direct keypair");
+                            dataToRestore = {
+                                version: "1.0",
+                                timestamp: Date.now(),
+                                address: window.currentUserAddress,
+                                keypair: parsedData
+                            };
+                        }
+
+                        console.log("🔍 Final data to restore:", dataToRestore);
+
+                        const result = await d3.restoreKeypair(dataToRestore, password);
+                        if (result) {
+                            alert("Keypair restored successfully!");
+                            closeRestoreModal();
+                            return;
+                        } else {
+                            alert("Failed to restore keypair. Check console for details.");
+                            return;
+                        }
                     } catch (error) {
                         alert("Invalid backup data format: " + error.message);
                         return;
@@ -2616,17 +2723,22 @@
                         return;
                     }
 
-                    // Create keypair object from manual input
-                    keypairData = {
-                        pub: pub,
-                        priv: priv,
-                        epub: epub,
-                        epriv: epriv
+                    // Create backup object structure from manual input
+                    const backupData = {
+                        version: "1.0",
+                        timestamp: Date.now(),
+                        address: window.currentUserAddress,
+                        keypair: {
+                            pub: pub,
+                            priv: priv,
+                            epub: epub,
+                            epriv: epriv
+                        }
                     };
 
                     // Try to restore using the manual keypair
                     try {
-                        const result = await d3.restoreKeypair(keypairData);
+                        const result = await d3.restoreKeypair(backupData);
                         if (result) {
                             alert("Keypair restored successfully from manual input!");
                             closeRestoreModal();
@@ -2651,6 +2763,22 @@
                 console.error("Error performing restore:", error);
                 alert("Error performing restore: " + error.message);
             }
+        };
+
+        // Function to populate fields with current keypair values
+        const populateFromCurrentKeypair = () => {
+            if (!window.gunKeyPair) {
+                alert("No current keypair available. Please connect your wallet first.");
+                return;
+            }
+
+            // Populate fields with current keypair values
+            document.getElementById('restorePub').value = window.gunKeyPair.pub || '';
+            document.getElementById('restorePriv').value = window.gunKeyPair.priv || '';
+            document.getElementById('restoreEpub').value = window.gunKeyPair.epub || '';
+            document.getElementById('restoreEpriv').value = window.gunKeyPair.epriv || '';
+
+            alert("Current keypair values loaded! You can now copy and modify them as needed.");
         };
     </script>
 </body>
